@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>她自己的笔记本</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --fg: #1b1f24; --muted: #6b7280;
+    --line: #e6e8ec; --soft: #f0f2f5;
+    --accent: #3b6ef5; --accent-soft: #eaf0ff;
+    --ok: #12945f; --ok-soft: #e7f7ef;
+    --warn: #b26a00; --warn-soft: #fdf3e2;
+    --danger: #d23f3f; --danger-soft: #fdecec;
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.18);
+    --radius: 14px;
+  }
+  [data-theme="dark"] {
+    --bg: #0e1116; --panel: #161a21; --fg: #e6e8ec; --muted: #98a1ae;
+    --line: #242a33; --soft: #1c222b;
+    --accent: #6f96ff; --accent-soft: #1b2440;
+    --ok: #4ade80; --ok-soft: #12291f;
+    --warn: #fbbf24; --warn-soft: #2a2110;
+    --danger: #f87171; --danger-soft: #2a1616;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px -18px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.65 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 22px 80px; }
+
+  /* ---------- 头部 ---------- */
+  .hero { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 22px; }
+  .hero h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .3px; }
+  .hero p { margin: 0; color: var(--muted); font-size: 13px; }
+  .hero .spacer { flex: 1; }
+  .hero .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 14px; min-width: 96px; box-shadow: var(--shadow);
+  }
+  .stat b { display: block; font-size: 19px; line-height: 1.2; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .stat.ok b { color: var(--ok); }
+  .stat.warn b { color: var(--warn); }
+
+  /* ---------- 工具条 ---------- */
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+  .search {
+    position: relative; flex: 1 1 260px; max-width: 420px;
+  }
+  .search input {
+    width: 100%; padding: 10px 12px 10px 36px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+    font: inherit; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: .5; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+    border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; transition: .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--fg); }
+  .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  button {
+    font: inherit; cursor: pointer; border-radius: 10px; padding: 9px 14px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+    transition: .15s; white-space: nowrap;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.06); }
+  button.ghost { background: transparent; }
+  button.danger { color: var(--danger); border-color: var(--line); }
+  button.danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+
+  /* ---------- 列表 ---------- */
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 16px 12px; box-shadow: var(--shadow); display: flex; flex-direction: column;
+    transition: transform .12s ease, border-color .15s;
+  }
+  .card:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .card h3 { margin: 0 0 8px; font-size: 15px; line-height: 1.45; display: flex; gap: 8px; align-items: flex-start; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--muted); }
+  .dot.high { background: var(--ok); }
+  .dot.medium { background: var(--warn); }
+  .dot.low, .dot.unknown { background: var(--muted); }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .meta a { color: var(--accent); text-decoration: none; }
+  .meta a:hover { text-decoration: underline; }
+  .body { white-space: pre-wrap; font-size: 13px; color: var(--fg); opacity: .9;
+    display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+  .foot { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .foot button { padding: 6px 10px; font-size: 12px; }
+
+  /* ---------- 空状态 ---------- */
+  .empty { text-align: center; padding: 64px 20px 56px; color: var(--muted); }
+  .empty .art {
+    width: 96px; height: 96px; margin: 0 auto 18px; border-radius: 24px;
+    display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
+  }
+  .empty h2 { margin: 0 0 6px; font-size: 16px; color: var(--fg); }
+  .empty p { margin: 0 0 18px; font-size: 13px; }
+  .empty .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* ---------- 弹窗 ---------- */
+  .modal {
+    position: fixed; inset: 0; background: rgba(10,14,20,.55); backdrop-filter: blur(2px);
+    display: none; align-items: center; justify-content: center; padding: 22px; z-index: 60;
+  }
+  .modal.open { display: flex; }
+  .sheet {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    width: min(720px, 100%); max-height: 88vh; overflow: auto; box-shadow: 0 24px 60px -20px rgba(0,0,0,.5);
+  }
+  .sheet header { display: flex; align-items: center; gap: 12px; padding: 18px 20px 0; }
+  .sheet header h2 { margin: 0; font-size: 16px; }
+  .sheet .body-pad { padding: 16px 20px 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .field input, .field textarea {
+    width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg); outline: none;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field textarea { min-height: 170px; resize: vertical; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .sheet .actions { display: flex; gap: 9px; align-items: center; }
+  .sheet .actions .spacer { flex: 1; }
+
+  /* ---------- 提示 ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(14px);
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow);
+    opacity: 0; pointer-events: none; transition: .2s; font-size: 13px; z-index: 80;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { border-left-color: var(--danger); }
+  .banner {
+    display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 10px;
+    background: var(--warn-soft); color: var(--warn); font-size: 13px;
+  }
+  .banner.show { display: block; }
+  @media (max-width: 560px) {
+    .wrap { padding: 20px 14px 70px; }
+    .hero h1 { font-size: 19px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <h1>她自己的笔记本</h1>
+      <p>她查到的结论会存进这里，下次遇到同类问题自动带上；来源可信度决定她说话有多笃定。</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="btns">
+      <button class="primary" id="btn-new">＋ 新建笔记</button>
+      <button class="ghost" id="btn-import">导入文件</button>
+      <button class="ghost" id="btn-export">导出 JSON</button>
+      <input type="file" id="file-input" accept=".json,.md,.txt,.markdown" hidden />
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="banner" id="banner">面板桥接还没就绪，正在重试…</div>
+
+  <div class="bar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+      </svg>
+      <input id="search" placeholder="搜索标题、正文、标签…  （Ctrl/⌘ + K）" />
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="spacer" style="flex:1"></div>
+    <button class="ghost" id="btn-refresh">刷新</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="empty" id="empty" hidden>
+    <div class="art">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6.5A1.5 1.5 0 0 1 5 19.5z"></path>
+        <path d="M8.5 7.5h7M8.5 11h7M8.5 14.5h4.5"></path>
+      </svg>
+    </div>
+    <h2>还没有任何笔记</h2>
+    <p>她查到东西时会自己写进来。你也可以先手动记一条，给她打个样。</p>
+    <div class="btns">
+      <button class="primary" id="btn-new2">＋ 新建第一条</button>
+      <button id="btn-import2">从文件导入</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <header>
+      <h2 id="sheet-title">新建笔记</h2>
+      <div class="spacer" style="flex:1"></div>
+      <button class="ghost" id="btn-close">✕</button>
+    </header>
+    <div class="body-pad">
+      <div class="field">
+        <label>标题</label>
+        <input id="f-title" placeholder="例如：雷横默 人格要点" />
+      </div>
+      <div class="field">
+        <label>正文</label>
+        <textarea id="f-body" placeholder="只写要点，别整段照抄网页。&#10;例如：震颤向，靠哈气叠层，势单力孤时输出一般。"></textarea>
+        <div class="hint"><span id="count">0</span> 字 · 改完自动保存到她的笔记本</div>
+      </div>
+      <div class="field">
+        <label>来源（可选，填了会自动按域名分级）</label>
+        <input id="f-source" placeholder="https://limbuscompany.huijiwiki.com/..." />
+      </div>
+      <div class="field">
+        <label>标签（可选，逗号分隔）</label>
+        <input id="f-tags" placeholder="limbus, EGO" />
+      </div>
+      <div class="actions">
+        <button class="primary" id="btn-save">保存</button>
+        <button class="ghost" id="btn-cancel">取消</button>
+        <div class="spacer"></div>
+        <button class="danger" id="btn-delete" hidden>删除这条</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const API = "/astrbot_plugin_notes";
+  let bridge = null;
+  let items = [];
+  let editing = null;
+  let filterTrust = "";
+
+  const $ = (id) => document.getElementById(id);
+
+  function ep(path) { return String(path || "").replace(/^\/+/, ""); }
+
+  async function ensureBridge() {
+    if (window.AstrBotPluginPage) { bridge = window.AstrBotPluginPage; return true; }
+    const t0 = Date.now();
+    while (Date.now() - t0 < 6000) {
+      await new Promise((r) => setTimeout(r, 60));
+      if (window.AstrBotPluginPage) { bridge = window.AstrBotPluginPage; return true; }
+    }
+    return false;
+  }
+
+  function get(path, params) {
+    if (bridge && bridge.apiGet) return bridge.apiGet(ep(path), params);
+    return fetch("/api/plug" + API + path + (params ? "?" + new URLSearchParams(params) : ""), {
+      credentials: "include",
+    }).then((r) => r.json());
+  }
+
+  function post(path, body) {
+    if (bridge && bridge.apiPost) return bridge.apiPost(ep(path), body);
+    return fetch("/api/plug" + API + path, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    }).then((r) => r.json());
+  }
+
+  function toast(msg, isError) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.className = "toast show" + (isError ? " error" : "");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => (el.className = "toast"), 2600);
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  const TRUST = {
+    high: { label: "可信", cls: "high" },
+    medium: { label: "一般", cls: "medium" },
+    low: { label: "存疑", cls: "low" },
+    unknown: { label: "未标注", cls: "unknown" },
+  };
+
+  function trustOf(n) { return TRUST[n] || TRUST.unknown; }
+
+  function fmtDate(ts) {
+    const d = new Date(Number(ts || 0) * 1000);
+    if (!Number.isFinite(d.getTime()) || d.getFullYear() < 2000) return "";
+    const p = (x) => String(x).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  function renderStats() {
+    const counts = { high: 0, medium: 0, low: 0, unknown: 0 };
+    let hits = 0;
+    for (const n of items) {
+      const k = trustOf(n).cls;
+      counts[k] = (counts[k] || 0) + 1;
+      hits += Number(n.hits || 0);
+    }
+    $("stats").innerHTML = [
+      `<div class="stat"><b>${items.length}</b><span>笔记总数</span></div>`,
+      `<div class="stat ok"><b>${counts.high}</b><span>可信来源</span></div>`,
+      `<div class="stat warn"><b>${counts.medium}</b><span>一般来源</span></div>`,
+      `<div class="stat"><b>${counts.low + counts.unknown}</b><span>存疑 / 未标注</span></div>`,
+      `<div class="stat"><b>${hits}</b><span>被引用次数</span></div>`,
+    ].join("");
+  }
+
+  function renderChips() {
+    const opts = [["", "全部"], ["high", "可信"], ["medium", "一般"], ["low", "存疑"], ["unknown", "未标注"]];
+    $("chips").innerHTML = opts.map(([v, label]) =>
+      `<button class="chip${filterTrust === v ? " on" : ""}" data-trust="${v}">${label}</button>`
+    ).join("");
+  }
+
+  function visible() {
+    const q = $("search").value.trim().toLowerCase();
+    return items.filter((n) => {
+      if (filterTrust && trustOf(n).cls !== filterTrust) return false;
+      if (!q) return true;
+      return (
+        String(n.title || "").toLowerCase().includes(q) ||
+        String(n.body || "").toLowerCase().includes(q) ||
+        (n.tags || []).join(" ").toLowerCase().includes(q)
+      );
+    });
+  }
+
+  function render() {
+    renderStats();
+    renderChips();
+    const shown = visible();
+    const grid = $("grid");
+    const noMatch = shown.length === 0;
+    $("empty").hidden = !noMatch;
+    grid.hidden = noMatch;
+    $("empty").querySelector("h2").textContent =
+      items.length === 0 ? "还没有任何笔记" : "没有匹配的笔记";
+    $("empty").querySelector("p").textContent =
+      items.length === 0
+        ? "她查到东西时会自己写进来。你也可以先手动记一条，给她打个样。"
+        : "换个关键词，或者把右上角的筛选切回「全部」。";
+
+    grid.innerHTML = shown.map((n) => {
+      const t = trustOf(n);
+      const src = n.source
+        ? `<a href="${esc(n.source)}" target="_blank" rel="noreferrer">查看来源</a>`
+        : `<span>无来源</span>`;
+      return `<div class="card" data-id="${esc(n.id)}">
+        <h3><span class="dot ${t.cls}"></span><span>${esc(n.title || "无标题")}</span></h3>
+        <div class="meta">
+          <span>${esc(t.label)}</span>
+          ${src}
+          <span>被引用 ${Number(n.hits || 0)} 次</span>
+          <span>${fmtDate(n.updated_at)}</span>
+        </div>
+        <div class="body">${esc(n.body || "")}</div>
+        <div class="foot">
+          <button data-act="edit">编辑</button>
+          <button class="danger" data-act="del">删除</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  function openEditor(note) {
+    editing = note || null;
+    $("sheet-title").textContent = note ? "编辑笔记" : "新建笔记";
+    $("f-title").value = note ? note.title || "" : "";
+    $("f-body").value = note ? note.body || "" : "";
+    $("f-source").value = note ? note.source || "" : "";
+    $("f-tags").value = note ? (note.tags || []).join(", ") : "";
+    $("btn-delete").hidden = !note;
+    $("count").textContent = String(($("f-body").value || "").length);
+    $("modal").classList.add("open");
+    setTimeout(() => $("f-title").focus(), 30);
+  }
+
+  function closeEditor() {
+    $("modal").classList.remove("open");
+    editing = null;
+  }
+
+  async function load() {
+    try {
+      const data = await get("list");
+      if (!data) throw new Error("接口没有返回数据");
+      items = data.items || [];
+      render();
+    } catch (e) {
+      $("banner").classList.add("show");
+      $("banner").textContent = "加载失败：" + (e && e.message ? e.message : e);
+    }
+  }
+
+  async function save() {
+    const payload = {
+      id: editing ? editing.id : "",
+      title: $("f-title").value.trim(),
+      body: $("f-body").value.trim(),
+      source: $("f-source").value.trim(),
+      tags: $("f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
+    };
+    if (!payload.title || !payload.body) return toast("标题和正文都要填", true);
+    try {
+      const res = await post("save", payload);
+      if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
+      closeEditor();
+      await load();
+      toast("已保存");
+    } catch (e) {
+      toast(e.message || "保存失败", true);
+    }
+  }
+
+  async function remove(id) {
+    if (!confirm("确定删掉这条笔记？")) return;
+    try {
+      const res = await post("delete", { id });
+      if (!res || !res.ok) throw new Error("删除失败");
+      closeEditor();
+      await load();
+      toast("已删除");
+    } catch (e) {
+      toast(e.message || "删除失败", true);
+    }
+  }
+
+  async function importFile(file) {
+    const text = await file.text();
+    let payload;
+    try {
+      payload = { name: file.name, content: JSON.parse(text) };
+    } catch {
+      payload = { name: file.name, content: text };
+    }
+    try {
+      const res = await post("import", payload);
+      if (!res || !res.ok) throw new Error((res && res.error) || "导入失败");
+      await load();
+      toast(`导入完成：新增 ${res.added}，更新 ${res.updated}`);
+    } catch (e) {
+      toast(e.message || "导入失败", true);
+    }
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "notes.json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  $("btn-new").onclick = () => openEditor(null);
+  $("btn-new2").onclick = () => openEditor(null);
+  $("btn-refresh").onclick = load;
+  $("btn-save").onclick = save;
+  $("btn-cancel").onclick = closeEditor;
+  $("btn-close").onclick = closeEditor;
+  $("btn-delete").onclick = () => editing && remove(editing.id);
+  $("btn-export").onclick = exportJson;
+  $("btn-import").onclick = () => $("file-input").click();
+  $("btn-import2").onclick = () => $("file-input").click();
+  $("file-input").onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) importFile(f);
+    e.target.value = "";
+  };
+  $("search").oninput = render;
+  $("f-body").oninput = () => ($("count").textContent = String($("f-body").value.length));
+  $("chips").addEventListener("click", (e) => {
+    const btn = e.target.closest(".chip");
+    if (!btn) return;
+    filterTrust = btn.dataset.trust || "";
+    render();
+  });
+  $("grid").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const card = btn.closest(".card");
+    const note = items.find((n) => n.id === card.dataset.id);
+    if (!note) return;
+    if (btn.dataset.act === "edit") openEditor(note);
+    if (btn.dataset.act === "del") remove(note.id);
+  });
+  $("modal").addEventListener("click", (e) => {
+    if (e.target === $("modal")) closeEditor();
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      $("search").focus();
+    }
+    if (e.key === "Escape") closeEditor();
+  });
+
+  (async () => {
+    const ok = await ensureBridge();
+    if (!ok) $("banner").classList.add("show");
+    if (bridge && bridge.ready) {
+      try {
+        await bridge.ready();
+        const ctx = bridge.getContext && bridge.getContext();
+        if (ctx && typeof ctx.isDark === "boolean") {
+          document.documentElement.setAttribute("data-theme", ctx.isDark ? "dark" : "light");
+        }
+      } catch {}
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+    load();
+  })();
+})();
+</script>
+</body>
+</html>

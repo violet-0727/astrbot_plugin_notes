@@ -1,0 +1,41 @@
+﻿name: astrbot_plugin_notes
+display_name: 她自己的笔记本
+short_desc: 让角色把查到的结论记下来，下次自动带上；每条笔记带来源与可信度，可在面板里管理。
+desc: |-
+  一个完全独立的成长型知识插件，不依赖也不修改任何其它插件。
+
+  角色可以用 notes_write 把查到的稳定结论写进自己的笔记本，下次遇到相关话题时
+  自动带进上下文；每条笔记记录来源 URL 并按域名分级（可信 / 一般 / 存疑），
+  让她在引用时自己判断该说到什么程度。
+
+  自带管理页：查看、搜索、编辑、删除、导入导出，都能在面板里点。
+
+  存储是一个 JSONL 文件，坏一行只丢一行；检索用字符二元组，不依赖向量库和分词器。
+help: |-
+  管理命令：
+  - 笔记（查看统计）
+  - 笔记 搜索 关键词
+  - 笔记 删除 id
+  - 笔记 导出
+
+  模型工具：notes_search / notes_write / notes_fetch
+
+  面板页：插件管理 → 她自己的笔记本 → 打开面板
+version: 0.3.0
+author: 若剑清
+repo: https://github.com/violet-0727/astrbot_plugin_notes
+astrbot_version: ">=4.22,<5"
+support_platforms:
+  - aiocqhttp
+  - qq_official
+  - telegram
+  - lark
+tags:
+  - notes
+  - knowledge
+  - memory
+  - self-learning
+  - companion
+pages:
+  - name: notes-panel
+    title: 笔记本
