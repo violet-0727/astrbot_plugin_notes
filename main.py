@@ -54,7 +54,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.5.0",
+    "0.5.1",
     "",
 )
 class NotesPlugin(Star):

@@ -132,6 +132,9 @@
 
 ---
 
+
+> **注入方式**：`on_llm_request` 里不修改 `req.system_prompt`，而是把笔记作为 `TextPart(...).mark_as_temp()` 追加到 `req.extra_user_content_parts`。临时块只发给本次请求、不落会话历史，系统提示词保持稳定，前缀缓存不会每轮失效。
+
 ## 配置
 
 | 键 | 默认 | 说明 |
