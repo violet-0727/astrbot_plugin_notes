@@ -18,6 +18,7 @@ from typing import Any
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
+from astrbot.core.agent.message import TextPart
 from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
 from .store import NoteStore
@@ -53,7 +54,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.4.0",
+    "0.5.0",
     "",
 )
 class NotesPlugin(Star):
@@ -307,11 +308,18 @@ class NotesPlugin(Star):
                 f"- {note.get('title') or '无标题'}（{trust}｜{note.get('source') or '无来源'}）：{body}"
             )
         lines.append("标「存疑」的别当定论；标「不可信」的是错误版本，只能用来避开旧错误，不能当事实说。")
-        current = str(getattr(req, "system_prompt", "") or "")
+        block = "\n".join(lines)
         try:
-            req.system_prompt = (current + "\n\n" + "\n".join(lines)).strip()
-        except Exception:
-            pass
+            parts = getattr(req, "extra_user_content_parts", None)
+            if not isinstance(parts, list):
+                parts = []
+                req.extra_user_content_parts = parts
+            # 只对本次请求可见：mark_as_temp() 标记后不落历史，
+            # 也不碰 req.system_prompt —— 避免每轮改写系统提示词击穿前缀缓存。
+            parts.append(TextPart(text=block).mark_as_temp())
+        except Exception as exc:
+            logger.debug("[Notes] 记忆块注入失败: %s", exc)
+            return
         for _score, note in hits:
             self.store.touch(str(note.get("id")))
 
