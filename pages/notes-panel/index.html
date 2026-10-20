@@ -49,6 +49,7 @@
   .stat span { font-size: 12px; color: var(--muted); }
   .stat.ok b { color: var(--ok); }
   .stat.warn b { color: var(--warn); }
+  .stat.bad b { color: var(--danger); }
 
   /* ---------- 工具条 ---------- */
   .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
@@ -95,6 +96,7 @@
   .dot.high { background: var(--ok); }
   .dot.medium { background: var(--warn); }
   .dot.low, .dot.unknown { background: var(--muted); }
+  .dot.untrusted { background: var(--danger); }
   .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
   .meta a { color: var(--accent); text-decoration: none; }
   .meta a:hover { text-decoration: underline; }
@@ -128,7 +130,7 @@
   .sheet .body-pad { padding: 16px 20px 20px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .field input, .field textarea {
+  .field input, .field textarea, .field select {
     width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--bg); color: var(--fg); outline: none;
   }
@@ -230,6 +232,18 @@
         <input id="f-source" placeholder="https://limbuscompany.huijiwiki.com/..." />
       </div>
       <div class="field">
+        <label>可信度</label>
+        <select id="f-trust">
+          <option value="">按来源自动判断</option>
+          <option value="high">可信</option>
+          <option value="medium">一般</option>
+          <option value="low">存疑</option>
+          <option value="untrusted">不可信（负面词条 / 已确认有误）</option>
+          <option value="unknown">未标注</option>
+        </select>
+        <div class="hint">手动选了就以你选的为准，不再按来源域名自动分级。</div>
+      </div>
+      <div class="field">
         <label>标签（可选，逗号分隔）</label>
         <input id="f-tags" placeholder="limbus, EGO" />
       </div>
@@ -302,6 +316,7 @@
     high: { label: "可信", cls: "high" },
     medium: { label: "一般", cls: "medium" },
     low: { label: "存疑", cls: "low" },
+    untrusted: { label: "不可信", cls: "untrusted" },
     unknown: { label: "未标注", cls: "unknown" },
   };
 
@@ -315,7 +330,7 @@
   }
 
   function renderStats() {
-    const counts = { high: 0, medium: 0, low: 0, unknown: 0 };
+    const counts = { high: 0, medium: 0, low: 0, untrusted: 0, unknown: 0 };
     let hits = 0;
     for (const n of items) {
       const k = trustOf(n).cls;
@@ -327,12 +342,13 @@
       `<div class="stat ok"><b>${counts.high}</b><span>可信来源</span></div>`,
       `<div class="stat warn"><b>${counts.medium}</b><span>一般来源</span></div>`,
       `<div class="stat"><b>${counts.low + counts.unknown}</b><span>存疑 / 未标注</span></div>`,
+      `<div class="stat bad"><b>${counts.untrusted}</b><span>不可信</span></div>`,
       `<div class="stat"><b>${hits}</b><span>被引用次数</span></div>`,
     ].join("");
   }
 
   function renderChips() {
-    const opts = [["", "全部"], ["high", "可信"], ["medium", "一般"], ["low", "存疑"], ["unknown", "未标注"]];
+    const opts = [["", "全部"], ["high", "可信"], ["medium", "一般"], ["low", "存疑"], ["untrusted", "不可信"], ["unknown", "未标注"]];
     $("chips").innerHTML = opts.map(([v, label]) =>
       `<button class="chip${filterTrust === v ? " on" : ""}" data-trust="${v}">${label}</button>`
     ).join("");
@@ -377,6 +393,7 @@
           <span>${esc(t.label)}</span>
           ${src}
           <span>被引用 ${Number(n.hits || 0)} 次</span>
+          ${Number(n.corrections || 0) > 0 ? `<span>更正 ${Number(n.corrections)} 次</span>` : ""}
           <span>${fmtDate(n.updated_at)}</span>
         </div>
         <div class="body">${esc(n.body || "")}</div>
@@ -394,6 +411,7 @@
     $("f-title").value = note ? note.title || "" : "";
     $("f-body").value = note ? note.body || "" : "";
     $("f-source").value = note ? note.source || "" : "";
+    $("f-trust").value = note ? note.trust || "" : "";
     $("f-tags").value = note ? (note.tags || []).join(", ") : "";
     $("btn-delete").hidden = !note;
     $("count").textContent = String(($("f-body").value || "").length);
@@ -424,6 +442,7 @@
       title: $("f-title").value.trim(),
       body: $("f-body").value.trim(),
       source: $("f-source").value.trim(),
+      trust: $("f-trust").value,
       tags: $("f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
     };
     if (!payload.title || !payload.body) return toast("标题和正文都要填", true);

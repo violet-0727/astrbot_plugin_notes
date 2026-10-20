@@ -21,7 +21,14 @@ from astrbot.api.star import Context, Star, register
 from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
 from .store import NoteStore
-from .tools import TRUST_LABEL, NotesFetchTool, NotesSearchTool, NotesWriteTool
+from .tools import (
+    TRUST_LABEL,
+    TRUST_LEVELS,
+    NotesCorrectTool,
+    NotesFetchTool,
+    NotesSearchTool,
+    NotesWriteTool,
+)
 
 PLUGIN_NAME = "astrbot_plugin_notes"
 # 面板桥接会把相对 endpoint 拼成 /api/plug/<插件名>/<endpoint>，
@@ -46,7 +53,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.2.0",
+    "0.4.0",
     "",
 )
 class NotesPlugin(Star):
@@ -71,6 +78,7 @@ class NotesPlugin(Star):
         self.tools: list[Any] = [
             NotesSearchTool(store=self.store),
             NotesWriteTool(store=self.store, trust_of=self.trust_of),
+            NotesCorrectTool(store=self.store),
         ]
         if self.fetch_enabled:
             self.tools.append(
@@ -161,13 +169,17 @@ class NotesPlugin(Star):
         tags = payload.get("tags") or []
         if not isinstance(tags, list):
             tags = [str(tags)]
+        # 面板里手动选的可信度优先；没选才按来源域名自动分级
+        trust = str(payload.get("trust") or "").strip().lower()
+        if trust not in TRUST_LEVELS:
+            trust = self.trust_of(source) if source else "unknown"
         if note_id:
             updated = self.store.update(
                 note_id,
                 title=title,
                 body=body,
                 source=source,
-                trust=self.trust_of(source) if source else "unknown",
+                trust=trust,
                 tags=[str(t).strip() for t in tags if str(t).strip()],
             )
             if not updated:
@@ -177,7 +189,7 @@ class NotesPlugin(Star):
             title=title,
             body=body,
             source=source,
-            trust=self.trust_of(source) if source else "unknown",
+            trust=trust,
             tags=[str(t).strip() for t in tags if str(t).strip()],
         )
         return {"ok": True, "note": note}
@@ -282,16 +294,19 @@ class NotesPlugin(Star):
             return
         lines = ["【你笔记本里查到的东西（你自己以前记的）】"]
         for _score, note in hits:
-            trust = {"high": "可信", "medium": "一般", "low": "存疑"}.get(
-                str(note.get("trust")), "未标注"
-            )
+            trust = {
+                "high": "可信",
+                "medium": "一般",
+                "low": "存疑",
+                "untrusted": "不可信（这条你以前记错过）",
+            }.get(str(note.get("trust")), "未标注")
             body = str(note.get("body") or "").strip()
             if len(body) > 500:
                 body = body[:500] + "…"
             lines.append(
                 f"- {note.get('title') or '无标题'}（{trust}｜{note.get('source') or '无来源'}）：{body}"
             )
-        lines.append("标「存疑」的别当定论，可以说得保守一点。")
+        lines.append("标「存疑」的别当定论；标「不可信」的是错误版本，只能用来避开旧错误，不能当事实说。")
         current = str(getattr(req, "system_prompt", "") or "")
         try:
             req.system_prompt = (current + "\n\n" + "\n".join(lines)).strip()

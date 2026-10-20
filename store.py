@@ -82,13 +82,14 @@ class NoteStore:
         source: str = "",
         trust: str = "unknown",
         tags: list[str] | None = None,
+        dedupe: bool = True,
     ) -> dict:
         now = time.time()
         title = (title or "").strip()[:120]
         body = (body or "").strip()
         source = (source or "").strip()
         with self._lock:
-            for note in self._notes:
+            for note in (self._notes if dedupe else []):
                 if source and note.get("source") == source:
                     note.update(
                         title=title or note.get("title", ""),
@@ -130,6 +131,17 @@ class NoteStore:
                     self._save_locked()
                     return dict(note)
         return None
+
+    def increment_corrections(self, note_id: str) -> int:
+        """记一次「被更正」，返回累计次数。"""
+        with self._lock:
+            for note in self._notes:
+                if note.get("id") == note_id:
+                    note["corrections"] = int(note.get("corrections") or 0) + 1
+                    note["updated_at"] = time.time()
+                    self._save_locked()
+                    return note["corrections"]
+        return 0
 
     def delete(self, note_id: str) -> bool:
         with self._lock:

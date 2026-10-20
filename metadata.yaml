@@ -6,7 +6,8 @@ desc: |-
 
   角色可以用 notes_write 把查到的稳定结论写进自己的笔记本，下次遇到相关话题时
   自动带进上下文；每条笔记记录来源 URL 并按域名分级（可信 / 一般 / 存疑），
-  让她在引用时自己判断该说到什么程度。
+  让她在引用时自己判断该说到什么程度。被用户纠正时，写错的旧版本会归档成
+  「不可信」词条，正确版本替换原条目，下次她既知道该怎么说，也知道别再这么错。
 
   自带管理页：查看、搜索、编辑、删除、导入导出，都能在面板里点。
 
@@ -18,10 +19,13 @@ help: |-
   - 笔记 删除 id
   - 笔记 导出
 
-  模型工具：notes_search / notes_write / notes_fetch
+  模型工具：notes_search / notes_write / notes_fetch / notes_correct
+
+  可信度分五档：可信 / 一般 / 存疑 / 不可信 / 未标注。面板里可以手动改；
+  当她说错被用户纠正时，旧版本会归档成「不可信」，正确版本留在原条目里。
 
   面板页：插件管理 → 她自己的笔记本 → 打开面板
-version: 0.3.0
+version: 0.4.0
 author: 若剑清
 repo: https://github.com/violet-0727/astrbot_plugin_notes
 astrbot_version: ">=4.22,<5"

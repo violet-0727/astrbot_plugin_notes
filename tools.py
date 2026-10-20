@@ -15,8 +15,10 @@ TRUST_LABEL = {
     "high": "可信（wiki/官方资料）",
     "medium": "一般（攻略/社区）",
     "low": "存疑（来源不明）",
+    "untrusted": "不可信（已确认有误）",
     "unknown": "未标注来源",
 }
+TRUST_LEVELS = ("high", "medium", "low", "untrusted", "unknown")
 
 
 @dataclass
@@ -148,3 +150,84 @@ class NotesFetchTool(FunctionTool):
         except Exception as exc:
             return f"抓取失败：{exc}"
         return f"来源：{url}\n\n{text}"
+
+
+@dataclass
+class NotesCorrectTool(FunctionTool):
+    """被用户纠正时用：旧版本归档为「不可信」，本条目换成正确版本。"""
+
+    store: Any = field(repr=False, default=None)
+    name: str = "notes_correct"
+    description: str = (
+        "当用户指出你笔记里的某条是错的，用这个工具更正。"
+        "它会把写错的旧内容归档成一条「不可信」的笔记（以后提醒你别再犯），"
+        "原笔记则替换成你改正后的内容。只改确实错的地方，不要整条重写。"
+    )
+    parameters: dict = field(
+        default_factory=lambda: {
+            "type": "object",
+            "properties": {
+                "note_id": {"type": "string", "description": "要更正的笔记 id，知道就直接填"},
+                "title_or_keyword": {
+                    "type": "string",
+                    "description": "不知道 id 时填标题或关键词，用它来定位笔记",
+                },
+                "corrected_body": {
+                    "type": "string",
+                    "description": "改正后的完整正文（替换掉旧的正文）",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "错在哪，一句话，会写进旧版本的备注里",
+                },
+            },
+            "required": ["corrected_body"],
+        }
+    )
+
+    async def run(
+        self,
+        event: AstrMessageEvent,
+        corrected_body: str,
+        note_id: str = "",
+        title_or_keyword: str = "",
+        reason: str = "",
+    ) -> str:
+        corrected_body = (corrected_body or "").strip()
+        if not corrected_body:
+            return "错误：corrected_body 不能为空。"
+
+        note = None
+        if note_id:
+            for item in self.store.all():
+                if item.get("id") == note_id:
+                    note = item
+                    break
+        if note is None and title_or_keyword.strip():
+            hits = self.store.search(title_or_keyword.strip(), limit=1, min_score=0.8)
+            if hits:
+                note = hits[0][1]
+        if note is None:
+            return "没找到要更正的笔记，可以先用 notes_search 查一下。"
+
+        old_body = str(note.get("body") or "").strip()
+        if old_body == corrected_body:
+            return "新旧内容一样，没有需要更正的地方。"
+
+        archived = self.store.add(
+            title=f"❌ 旧版本：{note.get('title') or '无标题'}",
+            body=f"（{reason.strip() or '被用户指出有误'}）\n\n{old_body}",
+            source=str(note.get("source") or ""),
+            trust="untrusted",
+            tags=list(dict.fromkeys([*(note.get("tags") or []), "错误版本"])),
+            dedupe=False,
+        )
+        updated = self.store.update(note["id"], body=corrected_body)
+        times = self.store.increment_corrections(note["id"])
+        if not updated:
+            return "更正失败：原笔记不存在了。"
+
+        return (
+            f"已更正：{updated.get('title')}（累计被更正 {times} 次）\n"
+            f"旧版本已归档为「不可信」：{archived.get('title')}（id={archived.get('id')}）"
+        )
