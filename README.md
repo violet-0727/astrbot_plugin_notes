@@ -195,23 +195,6 @@
 
 ---
 
-## 发布到插件市场
-
-参考官方文档：[发布插件到插件市场](https://docs.astrbot.app/dev/star/plugin-publish.html)
-
-1. **建 GitHub 仓库**，把本目录的内容放到仓库根目录（不是再套一层）
-2. 填 `metadata.yaml` 的 `repo:`（当前是空字符串，发布前必须填）
-3. 清理不该进仓库的东西：`__pycache__/`、`.venv/`、本地数据（`.gitignore` 已备好）
-4. 去 [AstrBot 插件发布页](https://cloud.astrbot.app/publish) 注册 AstrBot Cloud 账号并提交仓库
-5. 打包体积上限 **16MB**，本插件源码只有几十 KB，无需处理资源
-
-发布前检查：
-
-* `metadata.yaml` 的 `version` 与 README 一致
-* 没有硬编码本地路径、没有 `from astrbot_plugin_xxx import ...`
-* 在干净环境里能只靠本目录启动（不依赖其它插件）
-
----
 
 ## 已知边界
 
