@@ -25,7 +25,7 @@ help: |-
   当她说错被用户纠正时，旧版本会归档成「不可信」，正确版本留在原条目里。
 
   面板页：插件管理 → 她自己的笔记本 → 打开面板
-version: 0.5.1
+version: 0.8.1
 author: 若剑清
 repo: https://github.com/violet-0727/astrbot_plugin_notes
 astrbot_version: ">=4.22,<5"

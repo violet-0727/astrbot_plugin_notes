@@ -83,6 +83,7 @@ class NoteStore:
         trust: str = "unknown",
         tags: list[str] | None = None,
         dedupe: bool = True,
+        repo: str = "main",
     ) -> dict:
         now = time.time()
         title = (title or "").strip()[:120]
@@ -96,6 +97,7 @@ class NoteStore:
                         body=body or note.get("body", ""),
                         trust=trust or note.get("trust", "unknown"),
                         tags=tags or note.get("tags") or [],
+                        repo=repo or note.get("repo") or "main",
                         updated_at=now,
                     )
                     self._save_locked()
@@ -111,6 +113,7 @@ class NoteStore:
                 "source": source,
                 "trust": trust or "unknown",
                 "tags": tags or [],
+                "repo": (repo or "main").strip() or "main",
                 "created_at": now,
                 "updated_at": now,
                 "hits": 0,
@@ -120,7 +123,7 @@ class NoteStore:
             return dict(note)
 
     def update(self, note_id: str, **fields: object) -> dict | None:
-        allowed = {"title", "body", "source", "trust", "tags"}
+        allowed = {"title", "body", "source", "trust", "tags", "repo"}
         with self._lock:
             for note in self._notes:
                 if note.get("id") == note_id:
@@ -152,17 +155,41 @@ class NoteStore:
                 self._save_locked()
             return changed
 
-    def all(self) -> list[dict]:
+    def all(self, repo: str | None = None) -> list[dict]:
         with self._lock:
-            return [dict(n) for n in self._notes]
+            rows = [dict(n) for n in self._notes]
+        if repo:
+            rows = [n for n in rows if (n.get("repo") or "main") == repo]
+        return rows
 
-    def stats(self) -> dict:
+    def repo_counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
         with self._lock:
-            by_trust: dict[str, int] = {}
             for n in self._notes:
-                key = str(n.get("trust") or "unknown")
-                by_trust[key] = by_trust.get(key, 0) + 1
-            return {"total": len(self._notes), "by_trust": by_trust, "path": self.path}
+                key = n.get("repo") or "main"
+                counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    def stats(self, repo: str | None = None) -> dict:
+        with self._lock:
+            rows = list(self._notes)
+        if repo:
+            rows = [n for n in rows if (n.get("repo") or "main") == repo]
+        by_trust: dict[str, int] = {}
+        tag_counts: dict[str, int] = {}
+        for n in rows:
+            key = str(n.get("trust") or "unknown")
+            by_trust[key] = by_trust.get(key, 0) + 1
+            for tag in n.get("tags") or []:
+                tag = str(tag).strip()
+                if tag:
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        return {
+            "total": len(rows),
+            "by_trust": by_trust,
+            "tags": dict(sorted(tag_counts.items(), key=lambda kv: -kv[1])[:30]),
+            "path": self.path,
+        }
 
     # ---------------- 检索 ----------------
 

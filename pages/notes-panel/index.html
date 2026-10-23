@@ -5,159 +5,144 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>她自己的笔记本</title>
 <style>
-  :root {
-    --bg: #f6f7f9; --panel: #ffffff; --fg: #1b1f24; --muted: #6b7280;
-    --line: #e6e8ec; --soft: #f0f2f5;
-    --accent: #3b6ef5; --accent-soft: #eaf0ff;
-    --ok: #12945f; --ok-soft: #e7f7ef;
-    --warn: #b26a00; --warn-soft: #fdf3e2;
-    --danger: #d23f3f; --danger-soft: #fdecec;
-    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.18);
-    --radius: 14px;
+  :root{
+    --bg:#eef3fa;--panel:#fff;--fg:#16202e;--muted:#6b7c93;--line:#dbe4f0;--field:#f6f9fe;
+    --accent:#2f6feb;--accent2:#63a4ff;--soft:#e8f0ff;--ok:#1f9d6b;--warn:#c2410c;
+    --sh:0 1px 2px rgba(22,45,90,.06),0 12px 28px -16px rgba(22,45,90,.22);
   }
-  [data-theme="dark"] {
-    --bg: #0e1116; --panel: #161a21; --fg: #e6e8ec; --muted: #98a1ae;
-    --line: #242a33; --soft: #1c222b;
-    --accent: #6f96ff; --accent-soft: #1b2440;
-    --ok: #4ade80; --ok-soft: #12291f;
-    --warn: #fbbf24; --warn-soft: #2a2110;
-    --danger: #f87171; --danger-soft: #2a1616;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px -18px rgba(0,0,0,.8);
+  [data-theme="dark"]{
+    --bg:#0b1119;--panel:#111a26;--fg:#e6eefb;--muted:#8ea2bd;--line:#1e2b3d;--field:#0f1722;
+    --accent:#64a0ff;--accent2:#3d7ce0;--soft:#14233a;--ok:#4ade80;--warn:#fb923c;
+    --sh:0 1px 2px rgba(0,0,0,.5),0 16px 36px -22px rgba(0,0,0,.9);
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 14px/1.65 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 22px 80px; }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 20px 90px}
+  .hero{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin-bottom:14px}
+  .hero h1{margin:0 0 4px;font-size:21px}
+  .hero p{margin:0;color:var(--muted);font-size:13px}
+  .hero .sp{flex:1}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{font:inherit;cursor:pointer;border-radius:10px;padding:8px 13px;border:1px solid var(--line);
+    background:var(--panel);color:var(--fg);transition:.15s;white-space:nowrap}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.ghost{background:transparent}
+  button.mini{padding:4px 9px;font-size:12px;border-radius:8px}
+  button.danger{color:var(--warn)}
 
-  /* ---------- 头部 ---------- */
-  .hero { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 22px; }
-  .hero h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .3px; }
-  .hero p { margin: 0; color: var(--muted); font-size: 13px; }
-  .hero .spacer { flex: 1; }
-  .hero .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .repobar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin-bottom:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+  .repobar .label{font-size:12px;color:var(--muted);margin-right:2px}
+  .repo{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:10px;cursor:pointer;
+    border:1px solid transparent;transition:.15s;font-size:13px}
+  .repo:hover{background:var(--field)}
+  .repo.on{background:var(--soft);border-color:var(--accent);color:var(--accent)}
+  .repo .n{font-size:11px;opacity:.7;border:1px solid currentColor;border-radius:999px;padding:0 6px;line-height:1.5}
+  .repo.add{border:1px dashed var(--line);color:var(--muted)}
+  .repo.add:hover{border-color:var(--accent);color:var(--accent)}
+  .repo .tools{display:none;gap:2px;margin-left:2px}
+  .repo.on .tools{display:flex}
+  .repo .tools button{padding:0 5px;font-size:11px;background:transparent;border:0;color:inherit;opacity:.65}
+  .repo .tools button:hover{opacity:1}
 
-  .stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
-  .stat {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 10px 14px; min-width: 96px; box-shadow: var(--shadow);
-  }
-  .stat b { display: block; font-size: 19px; line-height: 1.2; }
-  .stat span { font-size: 12px; color: var(--muted); }
-  .stat.ok b { color: var(--ok); }
-  .stat.warn b { color: var(--warn); }
-  .stat.bad b { color: var(--danger); }
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .search{position:relative;flex:1 1 240px;max-width:400px}
+  .search input{width:100%;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);color:var(--fg);font:inherit;outline:none}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.45}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;padding:5px 14px;border-radius:8px;color:var(--muted);font-size:13px}
+  .seg button.on{background:var(--accent);color:#fff}
 
-  /* ---------- 工具条 ---------- */
-  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
-  .search {
-    position: relative; flex: 1 1 260px; max-width: 420px;
-  }
-  .search input {
-    width: 100%; padding: 10px 12px 10px 36px; border-radius: 10px;
-    border: 1px solid var(--line); background: var(--panel); color: var(--fg);
-    font: inherit; outline: none; transition: border-color .15s, box-shadow .15s;
-  }
-  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: .5; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .chip {
-    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
-    border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; transition: .15s;
-  }
-  .chip:hover { border-color: var(--accent); color: var(--fg); }
-  .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:5px;margin-bottom:14px;width:fit-content;box-shadow:var(--sh)}
+  .tab{border:0;background:transparent;color:var(--muted);padding:8px 20px;border-radius:9px;
+    font:inherit;cursor:pointer;transition:.15s}
+  .tab:hover{color:var(--fg)}
+  .tab.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px -6px var(--accent)}
 
-  button {
-    font: inherit; cursor: pointer; border-radius: 10px; padding: 9px 14px;
-    border: 1px solid var(--line); background: var(--panel); color: var(--fg);
-    transition: .15s; white-space: nowrap;
-  }
-  button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.primary:hover { filter: brightness(1.06); }
-  button.ghost { background: transparent; }
-  button.danger { color: var(--danger); border-color: var(--line); }
-  button.danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 13px;
+    min-width:86px;box-shadow:var(--sh)}
+  .stat b{display:block;font-size:18px;line-height:1.25}
+  .stat span{font-size:12px;color:var(--muted)}
 
-  /* ---------- 列表 ---------- */
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
-  .card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 16px 16px 12px; box-shadow: var(--shadow); display: flex; flex-direction: column;
-    transition: transform .12s ease, border-color .15s;
-  }
-  .card:hover { transform: translateY(-1px); border-color: var(--accent); }
-  .card h3 { margin: 0 0 8px; font-size: 15px; line-height: 1.45; display: flex; gap: 8px; align-items: flex-start; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--muted); }
-  .dot.high { background: var(--ok); }
-  .dot.medium { background: var(--warn); }
-  .dot.low, .dot.unknown { background: var(--muted); }
-  .dot.untrusted { background: var(--danger); }
-  .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-  .meta a { color: var(--accent); text-decoration: none; }
-  .meta a:hover { text-decoration: underline; }
-  .body { white-space: pre-wrap; font-size: 13px; color: var(--fg); opacity: .9;
-    display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
-  .foot { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
-  .foot button { padding: 6px 10px; font-size: 12px; }
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:var(--sh);
+    display:flex;flex-direction:column}
+  .card h3{margin:0 0 7px;font-size:15px;display:flex;gap:8px;align-items:flex-start}
+  .meta{display:flex;flex-wrap:wrap;gap:9px;font-size:12px;color:var(--muted);margin-bottom:7px}
+  .body{white-space:pre-wrap;font-size:13px;opacity:.92;display:-webkit-box;-webkit-line-clamp:6;
+    -webkit-box-orient:vertical;overflow:hidden}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+  .tag{font-size:11.5px;padding:1px 8px;border-radius:999px;background:var(--field);border:1px solid var(--line);color:var(--muted)}
+  .foot{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+  .badge{font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);flex:none}
+  .badge.high{color:var(--ok);border-color:var(--ok)}
+  .badge.untrusted{color:var(--warn);border-color:var(--warn)}
 
-  /* ---------- 空状态 ---------- */
-  .empty { text-align: center; padding: 64px 20px 56px; color: var(--muted); }
-  .empty .art {
-    width: 96px; height: 96px; margin: 0 auto 18px; border-radius: 24px;
-    display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
-  }
-  .empty h2 { margin: 0 0 6px; font-size: 16px; color: var(--fg); }
-  .empty p { margin: 0 0 18px; font-size: 13px; }
-  .empty .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .tree{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh);
+    padding:8px 6px}
+  .branch{padding:2px 0}
+  .bhead{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;user-select:none}
+  .bhead:hover{background:var(--field)}
+  .caret{width:12px;color:var(--muted);font-size:10px;transition:.18s}
+  .branch.open > .bhead .caret{transform:rotate(90deg)}
+  .bname{font-weight:600;font-size:14px}
+  .bcount{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+  .bmembers{font-size:11.5px;color:var(--muted);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bleaf{display:none;margin-left:22px;padding-left:14px;border-left:1px dashed var(--line)}
+  .branch.open > .bleaf{display:block}
+  .leaf{position:relative;display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:9px;cursor:pointer}
+  .leaf:hover{background:var(--field)}
+  .leaf::before{content:"";position:absolute;left:-14px;top:19px;width:11px;border-top:1px dashed var(--line)}
+  .leaf .t{font-size:13px;line-height:1.5}
+  .leaf .d{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .lv1 .bname{font-size:13px}
+  .lv2 .bname{font-size:12.5px;font-weight:500}
+  .lv1 > .bhead{padding:7px 10px}
+  .lv2 > .bhead{padding:6px 10px}
+  .lv1 > .bleaf{margin-left:14px;padding-left:12px}
+  .lv2 > .bleaf{margin-left:12px;padding-left:10px}
+  .untagged{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
 
-  /* ---------- 弹窗 ---------- */
-  .modal {
-    position: fixed; inset: 0; background: rgba(10,14,20,.55); backdrop-filter: blur(2px);
-    display: none; align-items: center; justify-content: center; padding: 22px; z-index: 60;
-  }
-  .modal.open { display: flex; }
-  .sheet {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
-    width: min(720px, 100%); max-height: 88vh; overflow: auto; box-shadow: 0 24px 60px -20px rgba(0,0,0,.5);
-  }
-  .sheet header { display: flex; align-items: center; gap: 12px; padding: 18px 20px 0; }
-  .sheet header h2 { margin: 0; font-size: 16px; }
-  .sheet .body-pad { padding: 16px 20px 20px; }
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .field input, .field textarea, .field select {
-    width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px;
-    border: 1px solid var(--line); background: var(--bg); color: var(--fg); outline: none;
-  }
-  .field input:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .field textarea { min-height: 170px; resize: vertical; }
-  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
-  .sheet .actions { display: flex; gap: 9px; align-items: center; }
-  .sheet .actions .spacer { flex: 1; }
+  .empty{text-align:center;padding:54px 20px 44px;color:var(--muted)}
+  .empty .art{width:88px;height:88px;margin:0 auto 14px;border-radius:24px;display:grid;place-items:center;
+    background:var(--soft);color:var(--accent)}
+  .empty h2{margin:0 0 6px;font-size:16px;color:var(--fg)}
+  .empty p{margin:0 0 14px;font-size:13px}
+  .empty .btns{justify-content:center}
 
-  /* ---------- 提示 ---------- */
-  .toast {
-    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(14px);
-    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
-    padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow);
-    opacity: 0; pointer-events: none; transition: .2s; font-size: 13px; z-index: 80;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.error { border-left-color: var(--danger); }
-  .banner {
-    display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 10px;
-    background: var(--warn-soft); color: var(--warn); font-size: 13px;
-  }
-  .banner.show { display: block; }
-  @media (max-width: 560px) {
-    .wrap { padding: 20px 14px 70px; }
-    .hero h1 { font-size: 19px; }
-    .grid { grid-template-columns: 1fr; }
+  .modal{position:fixed;inset:0;background:rgba(10,20,40,.5);display:none;align-items:center;justify-content:center;
+    padding:20px;z-index:60}
+  .modal.open{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:min(680px,100%);
+    max-height:88vh;overflow:auto;box-shadow:0 24px 60px -20px rgba(10,30,70,.45)}
+  .sheet header{display:flex;align-items:center;gap:12px;padding:18px 20px 0}
+  .sheet header h2{margin:0;font-size:16px}
+  .pad{padding:14px 20px 20px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .field input,.field textarea,.field select{width:100%;font:inherit;padding:9px 11px;border-radius:10px;
+    border:1px solid var(--line);background:var(--field);color:var(--fg);outline:none}
+  .field textarea{min-height:140px;resize:vertical}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--panel);
+    border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 16px;border-radius:10px;
+    box-shadow:var(--sh);opacity:0;pointer-events:none;transition:.2s;font-size:13px;z-index:80}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.error{border-left-color:var(--warn)}
+  .banner{display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:var(--soft);
+    color:var(--accent);font-size:13px}
+  .banner.show{display:block}
+  @media(max-width:640px){
+    .wrap{padding:18px 14px 80px}.grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -166,110 +151,138 @@
   <div class="hero">
     <div>
       <h1>她自己的笔记本</h1>
-      <p>她查到的结论会存进这里，下次遇到同类问题自动带上；来源可信度决定她说话有多笃定。</p>
+      <p>查到的东西存在这里。按仓库分开，同类的笔记会在树状图里归到一根枝上。</p>
     </div>
-    <div class="spacer"></div>
+    <div class="sp"></div>
     <div class="btns">
       <button class="primary" id="btn-new">＋ 新建笔记</button>
-      <button class="ghost" id="btn-import">导入文件</button>
-      <button class="ghost" id="btn-export">导出 JSON</button>
-      <input type="file" id="file-input" accept=".json,.md,.txt,.markdown" hidden />
+      <button class="ghost" id="btn-refresh">刷新</button>
+      <button class="ghost" id="btn-export">导出</button>
+      <button class="ghost" id="btn-import">导入</button>
     </div>
   </div>
 
-  <div class="stats" id="stats"></div>
   <div class="banner" id="banner">面板桥接还没就绪，正在重试…</div>
+
+  <div class="tabs" id="pagetabs">
+    <button class="tab on" data-page="tree">主页</button>
+    <button class="tab" data-page="list">列表</button>
+  </div>
+
+  <div class="repobar" id="repobar">
+    <span class="label">仓库</span>
+  </div>
 
   <div class="bar">
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
       </svg>
-      <input id="search" placeholder="搜索标题、正文、标签…  （Ctrl/⌘ + K）" />
+      <input id="search" placeholder="搜索标题、正文、标签…" />
     </div>
-    <div class="chips" id="chips"></div>
-    <div class="spacer" style="flex:1"></div>
-    <button class="ghost" id="btn-refresh">刷新</button>
   </div>
 
+  <div class="stats" id="stats"></div>
+
   <div class="grid" id="grid"></div>
+  <div class="tree" id="tree" hidden></div>
 
   <div class="empty" id="empty" hidden>
     <div class="art">
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-        <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6.5A1.5 1.5 0 0 1 5 19.5z"></path>
-        <path d="M8.5 7.5h7M8.5 11h7M8.5 14.5h4.5"></path>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5z"></path>
+        <path d="M8 7h7M8 11h7M8 15h4"></path>
       </svg>
     </div>
-    <h2>还没有任何笔记</h2>
-    <p>她查到东西时会自己写进来。你也可以先手动记一条，给她打个样。</p>
-    <div class="btns">
-      <button class="primary" id="btn-new2">＋ 新建第一条</button>
-      <button id="btn-import2">从文件导入</button>
-    </div>
+    <h2>这个仓库还是空的</h2>
+    <p>写一条，或者从别的来源导入。</p>
+    <div class="btns"><button class="primary" id="btn-new2">＋ 新建第一条</button></div>
   </div>
 </div>
 
 <div class="modal" id="modal">
   <div class="sheet">
-    <header>
-      <h2 id="sheet-title">新建笔记</h2>
-      <div class="spacer" style="flex:1"></div>
-      <button class="ghost" id="btn-close">✕</button>
-    </header>
-    <div class="body-pad">
-      <div class="field">
-        <label>标题</label>
-        <input id="f-title" placeholder="例如：雷横默 人格要点" />
+    <header><h2 id="sheet-title">新建笔记</h2><div style="flex:1"></div>
+      <button class="ghost" id="btn-close">✕</button></header>
+    <div class="pad">
+      <div class="field"><label>标题</label>
+        <input id="f-title" placeholder="一句话说清这条记的是什么" /></div>
+      <div class="field"><label>正文</label>
+        <textarea id="f-body" placeholder="具体的结论、细节"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>仓库</label><select id="f-repo"></select></div>
+        <div class="field"><label>可信度</label>
+          <select id="f-trust">
+            <option value="">按来源自动判断</option>
+            <option value="high">可信</option>
+            <option value="medium">一般</option>
+            <option value="low">存疑</option>
+            <option value="untrusted">不可信</option>
+          </select></div>
       </div>
-      <div class="field">
-        <label>正文</label>
-        <textarea id="f-body" placeholder="只写要点，别整段照抄网页。&#10;例如：震颤向，靠哈气叠层，势单力孤时输出一般。"></textarea>
-        <div class="hint"><span id="count">0</span> 字 · 改完自动保存到她的笔记本</div>
+      <div class="row2">
+        <div class="field"><label>来源链接</label>
+          <input id="f-source" placeholder="https://…" /></div>
+        <div class="field"><label>标签（逗号分隔，会用来分树枝）</label>
+          <input id="f-tags" placeholder="雷横默, 装备" /></div>
       </div>
-      <div class="field">
-        <label>来源（可选，填了会自动按域名分级）</label>
-        <input id="f-source" placeholder="https://limbuscompany.huijiwiki.com/..." />
-      </div>
-      <div class="field">
-        <label>可信度</label>
-        <select id="f-trust">
-          <option value="">按来源自动判断</option>
-          <option value="high">可信</option>
-          <option value="medium">一般</option>
-          <option value="low">存疑</option>
-          <option value="untrusted">不可信（负面词条 / 已确认有误）</option>
-          <option value="unknown">未标注</option>
-        </select>
-        <div class="hint">手动选了就以你选的为准，不再按来源域名自动分级。</div>
-      </div>
-      <div class="field">
-        <label>标签（可选，逗号分隔）</label>
-        <input id="f-tags" placeholder="limbus, EGO" />
-      </div>
-      <div class="actions">
+      <div style="display:flex;gap:9px;margin-top:12px;align-items:center">
         <button class="primary" id="btn-save">保存</button>
         <button class="ghost" id="btn-cancel">取消</button>
-        <div class="spacer"></div>
-        <button class="danger" id="btn-delete" hidden>删除这条</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="btn-delete" hidden>删掉这条</button>
       </div>
     </div>
   </div>
 </div>
 
+<div class="modal" id="repo-modal">
+  <div class="sheet">
+    <header><h2 id="repo-title">新建仓库</h2><div style="flex:1"></div>
+      <button class="ghost" id="repo-close">✕</button></header>
+    <div class="pad">
+      <div class="row2">
+        <div class="field"><label>仓库名称</label>
+          <input id="r-name" placeholder="例：游戏、学习、日常" /></div>
+        <div class="field"><label>仓库标记</label>
+          <input id="r-icon" maxlength="4" placeholder="例：🎮" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>容量上限（条，0 表示不限）</label>
+          <input id="r-max" type="number" min="0" max="5000" step="1" value="0" /></div>
+        <div class="field"><label>归类层数</label>
+          <select id="r-depth">
+            <option value="1">一级 · 仅按主标签归档</option>
+            <option value="2">二级 · 主标签下再分次要标签</option>
+            <option value="3">三级 · 次要标签下继续细分</option>
+          </select></div>
+      </div>
+      <div class="field"><label>归并阈值</label>
+        <input id="r-th" type="range" min="0.3" max="0.95" step="0.05" />
+        <div class="hint" id="r-th-v"></div></div>
+      <div class="hint">容量上限仅用于提示，不删除任何笔记；归类层数决定主页目录的分级深度。</div>
+      <div style="display:flex;gap:9px;margin-top:14px;align-items:center">
+        <button class="primary" id="r-save">保存</button>
+        <button class="ghost" id="r-cancel">取消</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="r-delete" hidden>删掉仓库</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".json,.txt,.md" hidden />
 <div class="toast" id="toast"></div>
 
 <script>
 (function () {
   const API = "/astrbot_plugin_notes";
-  let bridge = null;
-  let items = [];
-  let editing = null;
-  let filterTrust = "";
+  let bridge = null, repos = [], currentRepo = "main", notes = [], tree = null;
+  let view = "tree", editing = null, query = "";
+  const branchState = new Map();  // 树枝展开状态，切页不丢
 
   const $ = (id) => document.getElementById(id);
-
-  function ep(path) { return String(path || "").replace(/^\/+/, ""); }
+  const ep = (p) => String(p || "").replace(/^\/+/, "");
 
   async function ensureBridge() {
     if (window.AstrBotPluginPage) { bridge = window.AstrBotPluginPage; return true; }
@@ -280,129 +293,227 @@
     }
     return false;
   }
-
   function get(path, params) {
     if (bridge && bridge.apiGet) return bridge.apiGet(ep(path), params);
-    return fetch("/api/plug" + API + path + (params ? "?" + new URLSearchParams(params) : ""), {
-      credentials: "include",
-    }).then((r) => r.json());
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return fetch("/api/plug" + API + path + qs, { credentials: "include" }).then((r) => r.json());
   }
-
   function post(path, body) {
     if (bridge && bridge.apiPost) return bridge.apiPost(ep(path), body);
     return fetch("/api/plug" + API + path, {
-      method: "POST",
-      credentials: "include",
+      method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body || {}),
+      body: JSON.stringify(body || {})
     }).then((r) => r.json());
   }
-
-  function toast(msg, isError) {
+  function toast(msg, bad) {
     const el = $("toast");
     el.textContent = msg;
-    el.className = "toast show" + (isError ? " error" : "");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => (el.className = "toast"), 2600);
+    el.className = "toast show" + (bad ? " error" : "");
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => (el.className = "toast"), 2600);
   }
-
-  function esc(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  const TRUST = {
-    high: { label: "可信", cls: "high" },
-    medium: { label: "一般", cls: "medium" },
-    low: { label: "存疑", cls: "low" },
-    untrusted: { label: "不可信", cls: "untrusted" },
-    unknown: { label: "未标注", cls: "unknown" },
-  };
-
-  function trustOf(n) { return TRUST[n] || TRUST.unknown; }
-
+  const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   function fmtDate(ts) {
     const d = new Date(Number(ts || 0) * 1000);
-    if (!Number.isFinite(d.getTime()) || d.getFullYear() < 2000) return "";
+    if (!isFinite(d.getTime()) || d.getFullYear() < 2000) return "";
     const p = (x) => String(x).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+  }
+  function trustLabel(n) {
+    return n.trust_label || ({ high: "可信", medium: "一般", low: "存疑", untrusted: "不可信" })[n.trust] || "未标注";
   }
 
-  function renderStats() {
-    const counts = { high: 0, medium: 0, low: 0, untrusted: 0, unknown: 0 };
-    let hits = 0;
-    for (const n of items) {
-      const k = trustOf(n).cls;
-      counts[k] = (counts[k] || 0) + 1;
-      hits += Number(n.hits || 0);
-    }
+  function renderRepos() {
+    const bar = $("repobar");
+    bar.innerHTML = '<span class="label">仓库</span>' + repos.map((r) => {
+      const on = r.id === currentRepo ? " on" : "";
+      const tools = '<span class="tools">'
+        + '<button data-act="settings" title="仓库设置">⚙</button>'
+        + (r.id === "main" ? "" : '<button data-act="delrepo" title="删除仓库">✕</button>')
+        + '</span>';
+      return '<div class="repo' + on + '" data-id="' + esc(r.id) + '">'
+        + '<span>' + esc(r.icon || "📁") + '</span><span>' + esc(r.name || r.id) + '</span>'
+        + '<span class="n">' + (r.count || 0) + '</span>' + tools + '</div>';
+    }).join("") + '<div class="repo add" id="repo-add">＋ 新建仓库</div>';
+    const sel = $("f-repo");
+    sel.innerHTML = repos.map((r) =>
+      '<option value="' + esc(r.id) + '">' + esc((r.icon || "") + " " + (r.name || r.id)) + '</option>').join("");
+    sel.value = currentRepo;
+  }
+
+  async function loadRepos() {
+    try {
+      const data = await get("repos");
+      repos = (data && data.repos) || [];
+      if (!repos.some((r) => r.id === currentRepo)) currentRepo = repos[0] ? repos[0].id : "main";
+      renderRepos();
+    } catch (e) { toast("读取仓库失败", true); }
+  }
+
+  let repoEditing = null;
+
+  function openRepoModal(repo) {
+    repoEditing = repo || null;
+    $("repo-title").textContent = repo ? "仓库设置" : "新建仓库";
+    $("r-name").value = repo ? repo.name || "" : "";
+    $("r-icon").value = repo ? repo.icon || "📁" : "📁";
+    $("r-max").value = repo ? (repo.max_notes || 0) : 0;
+    $("r-depth").value = String(repo ? (repo.tree_depth || 2) : 2);
+    $("r-th").value = repo ? (repo.cluster_threshold || 0.6) : 0.6;
+    $("r-th-v").textContent = "当前阈值 " + Number($("r-th").value).toFixed(2) + "，数值越低越易归并";
+    $("r-delete").hidden = !repo || repo.id === "main";
+    $("repo-title").textContent = repo ? (repo.id === "main" ? "主仓库设置" : "仓库设置") : "新建仓库";
+    $("repo-modal").classList.add("open");
+    setTimeout(() => $("r-name").focus(), 30);
+  }
+  const closeRepoModal = () => { $("repo-modal").classList.remove("open"); repoEditing = null; };
+
+  async function saveRepo() {
+    const name = $("r-name").value.trim();
+    if (!name) return toast("仓库名称不可为空", true);
+    const payload = {
+      name: name,
+      icon: $("r-icon").value.trim() || "📁",
+      max_notes: Number($("r-max").value || 0),
+      tree_depth: Number($("r-depth").value || 2),
+      cluster_threshold: Number($("r-th").value || 0.6)
+    };
+    try {
+      let res;
+      if (repoEditing) {
+        res = await post("repos/save", Object.assign({ action: "update", id: repoEditing.id }, payload));
+      } else {
+        res = await post("repos/save", Object.assign({ action: "create" }, payload));
+        if (res && res.ok && res.repo) currentRepo = res.repo.id;
+      }
+      if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
+      tree = null;
+      closeRepoModal();
+      await loadRepos(); await reload();
+      toast(repoEditing ? "仓库设置已保存" : "仓库建好了");
+    } catch (e) { toast(e.message || "保存失败", true); }
+  }
+  async function deleteRepo(id) {
+    const repo = repos.find((r) => r.id === id);
+    if (repo && repo.id === "main") return toast("主仓库不能删", true);
+    if (!confirm("删掉「" + (repo ? repo.name : id) + "」？里面的笔记会搬回主仓库，不会丢。")) return;
+    const res = await post("repos/save", { action: "delete", id: id });
+    if (res && res.ok) {
+      currentRepo = "main"; tree = null;
+      await loadRepos(); await reload();
+      toast("已删除，笔记搬回主仓库");
+    } else toast((res && res.error) || "删除失败", true);
+  }
+
+  function visible(items) {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((n) =>
+      String(n.title || "").toLowerCase().includes(q) ||
+      String(n.body || "").toLowerCase().includes(q) ||
+      (n.tags || []).join(" ").toLowerCase().includes(q));
+  }
+  function renderStats(stats) {
+    const s = stats || {}, by = s.by_trust || {};
     $("stats").innerHTML = [
-      `<div class="stat"><b>${items.length}</b><span>笔记总数</span></div>`,
-      `<div class="stat ok"><b>${counts.high}</b><span>可信来源</span></div>`,
-      `<div class="stat warn"><b>${counts.medium}</b><span>一般来源</span></div>`,
-      `<div class="stat"><b>${counts.low + counts.unknown}</b><span>存疑 / 未标注</span></div>`,
-      `<div class="stat bad"><b>${counts.untrusted}</b><span>不可信</span></div>`,
-      `<div class="stat"><b>${hits}</b><span>被引用次数</span></div>`,
+      '<div class="stat"><b>' + (s.total || 0) + '</b><span>本仓库笔记</span></div>',
+      '<div class="stat"><b>' + (by.high || 0) + '</b><span>可信</span></div>',
+      '<div class="stat"><b>' + (by.low || 0) + '</b><span>存疑</span></div>',
+      '<div class="stat"><b>' + Object.keys(s.tags || {}).length + '</b><span>标签数</span></div>'
     ].join("");
   }
-
-  function renderChips() {
-    const opts = [["", "全部"], ["high", "可信"], ["medium", "一般"], ["low", "存疑"], ["untrusted", "不可信"], ["unknown", "未标注"]];
-    $("chips").innerHTML = opts.map(([v, label]) =>
-      `<button class="chip${filterTrust === v ? " on" : ""}" data-trust="${v}">${label}</button>`
-    ).join("");
+  function renderList() {
+    const shown = visible(notes), empty = shown.length === 0;
+    $("empty").hidden = !empty;
+    $("grid").hidden = empty;
+    $("empty").querySelector("h2").textContent = notes.length ? "没有匹配的笔记" : "这个仓库还是空的";
+    $("grid").innerHTML = shown.map((n) => {
+      const tags = (n.tags || []).map((t) => '<span class="tag">' + esc(t) + '</span>').join("");
+      return '<div class="card" data-id="' + esc(n.id) + '">'
+        + '<h3><span>' + esc(n.title) + '</span><span class="badge ' + esc(n.trust || "") + '">'
+        + esc(trustLabel(n)) + '</span></h3>'
+        + '<div class="meta"><span>' + fmtDate(n.updated_at) + '</span>'
+        + (n.source ? '<span>' + esc(String(n.source).slice(0, 42)) + '</span>' : '')
+        + '<span>用了 ' + Number(n.hits || 0) + ' 次</span></div>'
+        + '<div class="body">' + esc(n.body) + '</div>'
+        + (tags ? '<div class="tags">' + tags + '</div>' : '')
+        + '<div class="foot"><button class="mini" data-act="edit">编辑</button>'
+        + '<button class="mini danger" data-act="del">删除</button></div></div>';
+    }).join("");
+  }
+  function leafHtml(n) {
+    return '<div class="leaf" data-id="' + esc(n.id) + '"><span class="t">' + esc(n.title) + '</span>'
+      + '<span class="badge ' + esc(n.trust || "") + '">' + esc(trustLabel(n)) + '</span>'
+      + '<span class="d">' + fmtDate(n.updated_at) + '</span></div>';
+  }
+  function renderNode(node, level, parentKey) {
+    const key = parentKey ? parentKey + "||" + node.tag : node.tag;
+    const open = branchState.has(key) ? branchState.get(key) : level === 0;
+    let inner = "";
+    (node.children || []).forEach((child) => { inner += renderNode(child, level + 1, key); });
+    inner += (node.loose || []).map(leafHtml).join("");
+    if (!inner) inner = (node.notes || []).map(leafHtml).join("");  // 旧后端兜底
+    const cls = "branch lv" + level + (open ? " open" : "");
+    const style = level ? ' style="margin-left:' + (level * 14) + 'px"' : "";
+    const members = (node.members || []).filter((m) => m !== node.tag);
+    return '<div class="' + cls + '" data-key="' + esc(key) + '"' + style + '>'
+      + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(node.tag) + '</span>'
+      + '<span class="bcount">' + (node.count || (node.notes || []).length) + '</span>'
+      + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
+      + '</div><div class="bleaf">' + inner + '</div></div>';
   }
 
-  function visible() {
-    const q = $("search").value.trim().toLowerCase();
-    return items.filter((n) => {
-      if (filterTrust && trustOf(n).cls !== filterTrust) return false;
-      if (!q) return true;
-      return (
-        String(n.title || "").toLowerCase().includes(q) ||
-        String(n.body || "").toLowerCase().includes(q) ||
-        (n.tags || []).join(" ").toLowerCase().includes(q)
-      );
-    });
+  function renderTree() {
+    if (!tree) return;
+    const groups = tree.groups || [], untagged = tree.untagged || [];
+    let html = groups.map((g) => renderNode(g, 0, "")).join("");
+    if (untagged.length) {
+      const key = "__untagged__";
+      const open = branchState.has(key) ? branchState.get(key) : true;
+      html += '<div class="branch untagged' + (open ? " open" : "") + '" data-key="' + key + '">'
+        + '<div class="bhead"><span class="caret">▶</span>'
+        + '<span class="bname">未分类</span><span class="bcount">' + untagged.length + '</span></div>'
+        + '<div class="bleaf">' + untagged.map(leafHtml).join("") + '</div></div>';
+    }
+    $("tree").innerHTML = html || ('<div class="empty" style="padding:40px"><h2>还没有分组的笔记</h2>'
+      + '<p>给笔记加标签，这里就会长出树枝。</p></div>');
   }
 
   function render() {
-    renderStats();
-    renderChips();
-    const shown = visible();
-    const grid = $("grid");
-    const noMatch = shown.length === 0;
-    $("empty").hidden = !noMatch;
-    grid.hidden = noMatch;
-    $("empty").querySelector("h2").textContent =
-      items.length === 0 ? "还没有任何笔记" : "没有匹配的笔记";
-    $("empty").querySelector("p").textContent =
-      items.length === 0
-        ? "她查到东西时会自己写进来。你也可以先手动记一条，给她打个样。"
-        : "换个关键词，或者把右上角的筛选切回「全部」。";
+    renderRepos();
+    $("grid").hidden = view !== "list";
+    $("tree").hidden = view !== "tree";
+    document.querySelector(".bar").style.visibility = view === "list" ? "visible" : "hidden";
+    if (view === "list") renderList(); else renderTree();
+  }
 
-    grid.innerHTML = shown.map((n) => {
-      const t = trustOf(n);
-      const src = n.source
-        ? `<a href="${esc(n.source)}" target="_blank" rel="noreferrer">查看来源</a>`
-        : `<span>无来源</span>`;
-      return `<div class="card" data-id="${esc(n.id)}">
-        <h3><span class="dot ${t.cls}"></span><span>${esc(n.title || "无标题")}</span></h3>
-        <div class="meta">
-          <span>${esc(t.label)}</span>
-          ${src}
-          <span>被引用 ${Number(n.hits || 0)} 次</span>
-          ${Number(n.corrections || 0) > 0 ? `<span>更正 ${Number(n.corrections)} 次</span>` : ""}
-          <span>${fmtDate(n.updated_at)}</span>
-        </div>
-        <div class="body">${esc(n.body || "")}</div>
-        <div class="foot">
-          <button data-act="edit">编辑</button>
-          <button class="danger" data-act="del">删除</button>
-        </div>
-      </div>`;
-    }).join("");
+  async function reload() {
+    try {
+      const data = await get("list", { repo: currentRepo });
+      if (!data || !data.ok) throw new Error("读取失败");
+      notes = data.items || [];
+      renderStats(data.stats);
+      if (view === "tree") {
+        const t = await get("tree", { repo: currentRepo });
+        tree = (t && t.ok) ? t : null;
+      }
+      render();
+    } catch (e) {
+      $("banner").classList.add("show");
+      $("banner").textContent = "加载失败：" + (e && e.message ? e.message : e);
+    }
+  }
+
+  async function switchView(v) {
+    view = v;
+    document.querySelectorAll("#pagetabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.page === v));
+    if (view === "tree") {
+      const t = await get("tree", { repo: currentRepo });
+      tree = (t && t.ok) ? t : null;
+    }
+    render();
   }
 
   function openEditor(note) {
@@ -411,30 +522,14 @@
     $("f-title").value = note ? note.title || "" : "";
     $("f-body").value = note ? note.body || "" : "";
     $("f-source").value = note ? note.source || "" : "";
-    $("f-trust").value = note ? note.trust || "" : "";
     $("f-tags").value = note ? (note.tags || []).join(", ") : "";
+    $("f-trust").value = note ? note.trust || "" : "";
+    $("f-repo").value = note ? (note.repo || currentRepo) : currentRepo;
     $("btn-delete").hidden = !note;
-    $("count").textContent = String(($("f-body").value || "").length);
     $("modal").classList.add("open");
     setTimeout(() => $("f-title").focus(), 30);
   }
-
-  function closeEditor() {
-    $("modal").classList.remove("open");
-    editing = null;
-  }
-
-  async function load() {
-    try {
-      const data = await get("list");
-      if (!data) throw new Error("接口没有返回数据");
-      items = data.items || [];
-      render();
-    } catch (e) {
-      $("banner").classList.add("show");
-      $("banner").textContent = "加载失败：" + (e && e.message ? e.message : e);
-    }
-  }
+  const closeEditor = () => { $("modal").classList.remove("open"); editing = null; };
 
   async function save() {
     const payload = {
@@ -442,103 +537,127 @@
       title: $("f-title").value.trim(),
       body: $("f-body").value.trim(),
       source: $("f-source").value.trim(),
-      trust: $("f-trust").value,
       tags: $("f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
+      trust: $("f-trust").value,
+      repo: $("f-repo").value || currentRepo
     };
     if (!payload.title || !payload.body) return toast("标题和正文都要填", true);
     try {
       const res = await post("save", payload);
       if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
-      closeEditor();
-      await load();
+      closeEditor(); await loadRepos(); await reload();
       toast("已保存");
-    } catch (e) {
-      toast(e.message || "保存失败", true);
-    }
+    } catch (e) { toast(e.message || "保存失败", true); }
   }
-
   async function remove(id) {
     if (!confirm("确定删掉这条笔记？")) return;
-    try {
-      const res = await post("delete", { id });
-      if (!res || !res.ok) throw new Error("删除失败");
-      closeEditor();
-      await load();
-      toast("已删除");
-    } catch (e) {
-      toast(e.message || "删除失败", true);
-    }
-  }
-
-  async function importFile(file) {
-    const text = await file.text();
-    let payload;
-    try {
-      payload = { name: file.name, content: JSON.parse(text) };
-    } catch {
-      payload = { name: file.name, content: text };
-    }
-    try {
-      const res = await post("import", payload);
-      if (!res || !res.ok) throw new Error((res && res.error) || "导入失败");
-      await load();
-      toast(`导入完成：新增 ${res.added}，更新 ${res.updated}`);
-    } catch (e) {
-      toast(e.message || "导入失败", true);
-    }
+    const res = await post("delete", { id: id });
+    if (res && res.ok) { closeEditor(); await loadRepos(); await reload(); toast("已删除"); }
+    else toast("删除失败", true);
   }
 
   function exportJson() {
-    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+    const rows = notes.map((n) => ({
+      title: n.title, body: n.body, source: n.source, trust: n.trust, tags: n.tags, repo: n.repo
+    }));
+    const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "notes.json";
+    a.download = "notes-" + (currentRepo || "all") + "-" + Date.now() + ".json";
     a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    URL.revokeObjectURL(a.href);
   }
+  async function onFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const res = await post("import", { content: text, name: file.name, repo: currentRepo });
+      if (!res || !res.ok) throw new Error((res && res.error) || "导入失败");
+      await loadRepos(); await reload();
+      toast("导入了 " + (res.added || 0) + " 条");
+    } catch (err) { toast(err.message || "导入失败", true); }
+    e.target.value = "";
+  }
+
+  $("repobar").addEventListener("click", (e) => {
+    if (e.target.closest("#repo-add")) return openRepoModal(null);
+    const chip = e.target.closest(".repo");
+    if (!chip || !chip.dataset.id) return;
+    const act = e.target.closest("button[data-act]");
+    if (act) {
+      e.stopPropagation();
+      if (act.dataset.act === "settings") return openRepoModal(repos.find((r) => r.id === chip.dataset.id));
+      if (act.dataset.act === "delrepo") return deleteRepo(chip.dataset.id);
+      return;
+    }
+    if (chip.dataset.id === currentRepo) return;
+    currentRepo = chip.dataset.id;
+    tree = null;
+    loadRepos().then(reload);
+  });
+  document.querySelectorAll("#pagetabs .tab").forEach((b) => { b.onclick = () => switchView(b.dataset.page); });
+  $("search").addEventListener("input", () => { query = $("search").value; if (view === "list") renderList(); });
+
+  $("tree").addEventListener("click", (e) => {
+    const shead = e.target.closest(".shead");
+    if (shead) {
+      const subBranch = shead.parentElement;
+      subBranch.classList.toggle("open");
+      const skey = subBranch.dataset.key || "";
+      if (skey) branchState.set(skey, subBranch.classList.contains("open"));
+      return;
+    }
+    const head = e.target.closest(".bhead");
+    if (head) {
+      const branch = head.parentElement;
+      branch.classList.toggle("open");
+      const key = branch.dataset.key || "";
+      if (key) branchState.set(key, branch.classList.contains("open"));
+      return;
+    }
+    const leaf = e.target.closest(".leaf");
+    if (!leaf) return;
+    const note = notes.find((n) => n.id === leaf.dataset.id);
+    if (note) openEditor(note);
+  });
+  $("grid").addEventListener("click", (e) => {
+    const card = e.target.closest(".card");
+    if (!card) return;
+    const note = notes.find((n) => n.id === card.dataset.id);
+    if (!note) return;
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return openEditor(note);
+    if (btn.dataset.act === "edit") openEditor(note);
+    if (btn.dataset.act === "del") remove(note.id);
+  });
+
+  $("r-save").onclick = saveRepo;
+  $("r-cancel").onclick = closeRepoModal;
+  $("repo-close").onclick = closeRepoModal;
+  $("r-th").oninput = () => {
+    $("r-th-v").textContent = "当前阈值 " + Number($("r-th").value).toFixed(2) + "，数值越低越易归并";
+  };
+  $("r-delete").onclick = () => {
+    if (!repoEditing) return;
+    const id = repoEditing.id;
+    closeRepoModal();
+    deleteRepo(id);
+  };
+  $("repo-modal").addEventListener("click", (e) => { if (e.target.id === "repo-modal") closeRepoModal(); });
 
   $("btn-new").onclick = () => openEditor(null);
   $("btn-new2").onclick = () => openEditor(null);
-  $("btn-refresh").onclick = load;
+  $("btn-refresh").onclick = () => loadRepos().then(reload);
+  $("btn-export").onclick = exportJson;
+  $("btn-import").onclick = () => $("file-input").click();
+  $("file-input").onchange = onFile;
   $("btn-save").onclick = save;
   $("btn-cancel").onclick = closeEditor;
   $("btn-close").onclick = closeEditor;
   $("btn-delete").onclick = () => editing && remove(editing.id);
-  $("btn-export").onclick = exportJson;
-  $("btn-import").onclick = () => $("file-input").click();
-  $("btn-import2").onclick = () => $("file-input").click();
-  $("file-input").onchange = (e) => {
-    const f = e.target.files && e.target.files[0];
-    if (f) importFile(f);
-    e.target.value = "";
-  };
-  $("search").oninput = render;
-  $("f-body").oninput = () => ($("count").textContent = String($("f-body").value.length));
-  $("chips").addEventListener("click", (e) => {
-    const btn = e.target.closest(".chip");
-    if (!btn) return;
-    filterTrust = btn.dataset.trust || "";
-    render();
-  });
-  $("grid").addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-act]");
-    if (!btn) return;
-    const card = btn.closest(".card");
-    const note = items.find((n) => n.id === card.dataset.id);
-    if (!note) return;
-    if (btn.dataset.act === "edit") openEditor(note);
-    if (btn.dataset.act === "del") remove(note.id);
-  });
-  $("modal").addEventListener("click", (e) => {
-    if (e.target === $("modal")) closeEditor();
-  });
-  document.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-      e.preventDefault();
-      $("search").focus();
-    }
-    if (e.key === "Escape") closeEditor();
-  });
+  $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) closeEditor(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeEditor(); });
 
   (async () => {
     const ok = await ensureBridge();
@@ -550,11 +669,10 @@
         if (ctx && typeof ctx.isDark === "boolean") {
           document.documentElement.setAttribute("data-theme", ctx.isDark ? "dark" : "light");
         }
-      } catch {}
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {}
     }
-    load();
+    await loadRepos();
+    await reload();
   })();
 })();
 </script>

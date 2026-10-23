@@ -21,7 +21,8 @@ from astrbot.api.star import Context, Star, register
 from astrbot.core.agent.message import TextPart
 from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
-from .store import NoteStore
+from .repos import RepoStore
+from .store import NoteStore, grams
 from .tools import (
     TRUST_LABEL,
     TRUST_LEVELS,
@@ -54,7 +55,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.5.1",
+    "0.8.1",
     "",
 )
 class NotesPlugin(Star):
@@ -63,6 +64,7 @@ class NotesPlugin(Star):
         self.config = config or {}
 
         data_dir = os.path.join(get_astrbot_plugin_data_path(), PLUGIN_NAME)
+        self.repos = RepoStore(os.path.join(data_dir, "repos.json"))
         self.store = NoteStore(os.path.join(data_dir, "notes.jsonl"))
 
         self.enabled = self._bool("enabled", True)
@@ -142,6 +144,9 @@ class NotesPlugin(Star):
             ("/delete", self.api_delete, ["POST"], "删除一条笔记"),
             ("/import", self.api_import, ["POST"], "批量导入笔记"),
             ("/stats", self.api_stats, ["GET"], "笔记本统计"),
+            ("/repos", self.api_repos, ["GET"], "仓库列表"),
+            ("/repos/save", self.api_repo_save, ["POST"], "新建/改名/删除仓库"),
+            ("/tree", self.api_tree, ["GET"], "按标签聚合成树"),
         ]
         for path, handler, methods, desc in routes:
             try:
@@ -149,12 +154,191 @@ class NotesPlugin(Star):
             except Exception as exc:
                 logger.warning("[Notes] 注册面板 API 失败 %s: %s", path, exc)
 
+    def _query(self, key: str, default: str = "") -> str:
+        if request is None:
+            return default
+        try:
+            args = request.args
+            value = args.get(key)
+            return str(value) if value is not None else default
+        except Exception:
+            return default
+
     async def api_list(self):
-        items = self.store.all()
+        repo = self._query("repo")
+        items = self.store.all(repo or None)
         items.sort(key=lambda n: -float(n.get("updated_at") or 0))
         for note in items:
             note["trust_label"] = TRUST_LABEL.get(str(note.get("trust")), "未标注")
-        return {"ok": True, "items": items, "stats": self.store.stats()}
+        return {
+            "ok": True,
+            "items": items,
+            "stats": self.store.stats(repo or None),
+            "repo": repo or "main",
+        }
+
+    async def api_repos(self):
+        counts = self.store.repo_counts()
+        repos = self.repos.all()
+        for repo in repos:
+            repo["count"] = counts.get(repo["id"], 0)
+            limit = int(repo.get("max_notes") or 0)
+            repo["over"] = bool(limit and repo["count"] > limit)
+        # 笔记里出现过但仓库表里没有的 id，兜底补上
+        known = {r["id"] for r in repos}
+        for repo_id, count in counts.items():
+            if repo_id and repo_id not in known:
+                repos.append({"id": repo_id, "name": repo_id, "icon": "📁", "order": 999, "count": count})
+        return {"ok": True, "repos": repos}
+
+    async def api_repo_save(self):
+        payload = await self._json_body()
+        action = str(payload.get("action") or "create").strip()
+        repo_id = str(payload.get("id") or "").strip()
+        if action == "delete":
+            if not repo_id:
+                return {"ok": False, "error": "缺少 id"}
+            if repo_id == "main":
+                return {"ok": False, "error": "主仓库不能删"}
+            moved = 0
+            for note in self.store.all(repo_id):
+                if self.store.update(note["id"], repo="main"):
+                    moved += 1
+            ok = self.repos.delete(repo_id)
+            return {"ok": ok, "moved": moved}
+        if action == "update":
+            repo = self.repos.update(
+                repo_id,
+                name=payload.get("name"),
+                icon=payload.get("icon"),
+                order=payload.get("order"),
+                max_notes=payload.get("max_notes"),
+                tree_depth=payload.get("tree_depth"),
+                cluster_threshold=payload.get("cluster_threshold"),
+            )
+            return {"ok": bool(repo), "repo": repo}
+        name = str(payload.get("name") or "").strip()
+        if not name:
+            return {"ok": False, "error": "仓库名不能为空"}
+        repo = self.repos.create(
+            name,
+            str(payload.get("icon") or "📁"),
+            max_notes=payload.get("max_notes"),
+            tree_depth=payload.get("tree_depth"),
+            cluster_threshold=payload.get("cluster_threshold"),
+        )
+        return {"ok": True, "repo": repo}
+
+    def _cluster_tags(self, notes: list[dict], threshold: float = 0.6) -> list[dict]:
+        """把写法相近的标签并成一簇（二元组 Jaccard）。"""
+        freq: dict[str, int] = {}
+        for note in notes:
+            for tag in note.get("tags") or []:
+                tag = str(tag).strip()
+                if tag:
+                    freq[tag] = freq.get(tag, 0) + 1
+        if not freq:
+            return []
+        def _sim(a: str, b: str) -> float:
+            if a == b:
+                return 1.0
+            if a in b or b in a:
+                return 0.9  # 一个包含另一个：雷横默 / 雷横默攻略
+            ga, gb = grams(a), grams(b)
+            union = len(ga | gb)
+            return len(ga & gb) / union if union else 0.0
+
+        clusters: list[dict] = []
+        for tag in sorted(freq, key=lambda x: -freq[x]):
+            placed = False
+            for cluster in clusters:
+                best = max(_sim(tag, member) for member in cluster["members"])
+                if best >= threshold:
+                    cluster["members"].append(tag)
+                    placed = True
+                    break
+            if not placed:
+                clusters.append({"label": tag, "members": [tag]})
+        for cluster in clusters:
+            cluster["weight"] = sum(freq.get(m, 0) for m in cluster["members"])
+        clusters.sort(key=lambda c: -c["weight"])
+        return clusters
+
+    def _build_tree(self, entries: list, depth: int, threshold: float, level: int = 0) -> tuple[list, list]:
+        """entries: [(note, [还有效的标签])] → (分组树, 落在本层没分组的笔记)。"""
+        if not entries:
+            return [], []
+        clusters = self._cluster_tags(
+            [{"tags": tags} for _note, tags in entries], threshold=threshold
+        )
+        if not clusters:
+            return [], [note for note, _tags in entries]
+
+        index: dict[str, int] = {}
+        for idx, cluster in enumerate(clusters):
+            for member in cluster["members"]:
+                index[member] = idx
+
+        buckets = [
+            {
+                "tag": c["label"],
+                "members": c["members"],
+                "level": level,
+                "notes": [],
+                "children": [],
+                "loose": [],
+            }
+            for c in clusters
+        ]
+        grouped: dict[int, list] = {i: [] for i in range(len(buckets))}
+        loose: list = []
+        for note, tags in entries:
+            hit = next((index[t] for t in tags if t in index), None)
+            if hit is None:
+                loose.append(note)
+                continue
+            used = set(buckets[hit]["members"])
+            grouped[hit].append((note, [t for t in tags if t not in used]))
+
+        for idx, bucket in enumerate(buckets):
+            items = grouped[idx]
+            bucket["notes"] = [note for note, _tags in items]
+            bucket["count"] = len(bucket["notes"])
+            if depth > 1 and len(items) > 1:
+                children, sub_loose = self._build_tree(items, depth - 1, threshold, level + 1)
+                bucket["children"] = children
+                bucket["loose"] = sub_loose
+            else:
+                bucket["loose"] = bucket["notes"]
+            bucket["loose_count"] = len(bucket["loose"])
+
+        nodes = [b for b in buckets if b["count"]]
+        nodes.sort(key=lambda b: -b["count"])
+        return nodes, loose
+
+    async def api_tree(self):
+        repo = self._query("repo") or "main"
+        repo_cfg = self.repos.get(repo) or {}
+        depth = int(repo_cfg.get("tree_depth") or 2)
+        threshold = float(repo_cfg.get("cluster_threshold") or 0.6)
+        notes = self.store.all(repo)
+
+        entries = []
+        for note in notes:
+            tags = [str(x).strip() for x in (note.get("tags") or []) if str(x).strip()]
+            note["trust_label"] = TRUST_LABEL.get(str(note.get("trust")), "未标注")
+            entries.append((note, tags))
+
+        groups, untagged = self._build_tree(entries, depth, threshold)
+        return {
+            "ok": True,
+            "repo": repo,
+            "depth": depth,
+            "threshold": threshold,
+            "groups": groups,
+            "untagged": untagged,
+            "total": len(notes),
+        }
 
     async def api_stats(self):
         return {"ok": True, "stats": self.store.stats()}
@@ -166,6 +350,7 @@ class NotesPlugin(Star):
         if not title or not body:
             return {"ok": False, "error": "标题和正文都不能为空"}
         note_id = str(payload.get("id") or "").strip()
+        repo = str(payload.get("repo") or self._query("repo") or "main").strip() or "main"
         source = str(payload.get("source") or "").strip()
         tags = payload.get("tags") or []
         if not isinstance(tags, list):
@@ -182,6 +367,7 @@ class NotesPlugin(Star):
                 source=source,
                 trust=trust,
                 tags=[str(t).strip() for t in tags if str(t).strip()],
+                repo=repo,
             )
             if not updated:
                 return {"ok": False, "error": "没找到这条笔记"}
@@ -192,6 +378,7 @@ class NotesPlugin(Star):
             source=source,
             trust=trust,
             tags=[str(t).strip() for t in tags if str(t).strip()],
+            repo=repo,
         )
         return {"ok": True, "note": note}
 
@@ -214,6 +401,7 @@ class NotesPlugin(Star):
             return {"ok": False, "error": "没有可导入的内容"}
         added = 0
         updated = 0
+        default_repo = str(payload.get("repo") or self._query("repo") or "main").strip() or "main"
         before_ids = {n.get("id") for n in self.store.all()}
         for row in rows:
             if not isinstance(row, dict):
@@ -229,6 +417,7 @@ class NotesPlugin(Star):
                 source=source,
                 trust=str(row.get("trust") or (self.trust_of(source) if source else "unknown")),
                 tags=row.get("tags") if isinstance(row.get("tags"), list) else [],
+                repo=str(row.get("repo") or default_repo).strip() or default_repo,
             )
             if note.get("id") in before_ids:
                 updated += 1
