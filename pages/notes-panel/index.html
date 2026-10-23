@@ -91,25 +91,17 @@
   .bhead{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;user-select:none}
   .bhead:hover{background:var(--field)}
   .caret{width:12px;color:var(--muted);font-size:10px;transition:.18s}
-  .branch.open .caret{transform:rotate(90deg)}
+  .branch.open > .bhead .caret{transform:rotate(90deg)}
   .bname{font-weight:600;font-size:14px}
   .bcount{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px}
   .bmembers{font-size:11.5px;color:var(--muted);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bleaf{display:none;margin-left:22px;padding-left:14px;border-left:1px dashed var(--line)}
-  .branch.open .bleaf{display:block}
+  .branch.open > .bleaf{display:block}
   .leaf{position:relative;display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:9px;cursor:pointer}
   .leaf:hover{background:var(--field)}
   .leaf::before{content:"";position:absolute;left:-14px;top:19px;width:11px;border-top:1px dashed var(--line)}
   .leaf .t{font-size:13px;line-height:1.5}
   .leaf .d{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
-  .sub{margin:2px 0}
-  .shead{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer;
-    font-size:13px;color:var(--muted);user-select:none}
-  .shead:hover{background:var(--field)}
-  .sname{font-weight:500;color:var(--fg)}
-  .sub.open .caret{transform:rotate(90deg)}
-  .sleaf{display:none;margin-left:12px;padding-left:12px;border-left:1px dashed var(--line)}
-  .sub.open .sleaf{display:block}
   .lv1 .bname{font-size:13px}
   .lv2 .bname{font-size:12.5px;font-weight:500}
   .lv1 > .bhead{padding:7px 10px}
@@ -173,7 +165,7 @@
   <div class="banner" id="banner">面板桥接还没就绪，正在重试…</div>
 
   <div class="tabs" id="pagetabs">
-    <button class="tab on" data-page="tree">树状图</button>
+    <button class="tab on" data-page="tree">主页</button>
     <button class="tab" data-page="list">列表</button>
   </div>
 
@@ -250,25 +242,25 @@
       <button class="ghost" id="repo-close">✕</button></header>
     <div class="pad">
       <div class="row2">
-        <div class="field"><label>仓库名</label>
-          <input id="r-name" placeholder="游戏 / 学习 / 生活" /></div>
-        <div class="field"><label>图标（一个 emoji）</label>
-          <input id="r-icon" maxlength="4" placeholder="🎮" /></div>
+        <div class="field"><label>仓库名称</label>
+          <input id="r-name" placeholder="例：游戏、学习、日常" /></div>
+        <div class="field"><label>仓库标记</label>
+          <input id="r-icon" maxlength="4" placeholder="例：🎮" /></div>
       </div>
       <div class="row2">
-        <div class="field"><label>记录阈值（条，0 = 不限）</label>
+        <div class="field"><label>容量上限（条，0 表示不限）</label>
           <input id="r-max" type="number" min="0" max="5000" step="1" value="0" /></div>
-        <div class="field"><label>分类级数</label>
+        <div class="field"><label>归类层数</label>
           <select id="r-depth">
-            <option value="1">1 级 · 只看主标签</option>
-            <option value="2">2 级 · 主标签 → 次要标签</option>
-            <option value="3">3 级 · 再往下细分一层</option>
+            <option value="1">一级 · 仅按主标签归档</option>
+            <option value="2">二级 · 主标签下再分次要标签</option>
+            <option value="3">三级 · 次要标签下继续细分</option>
           </select></div>
       </div>
-      <div class="field"><label>标签合并松紧</label>
+      <div class="field"><label>归并阈值</label>
         <input id="r-th" type="range" min="0.3" max="0.95" step="0.05" />
         <div class="hint" id="r-th-v"></div></div>
-      <div class="hint">阈值只做提醒，不会自动删笔记；分类级数决定树状图分几层。</div>
+      <div class="hint">容量上限仅用于提示，不删除任何笔记；归类层数决定主页目录的分级深度。</div>
       <div style="display:flex;gap:9px;margin-top:14px;align-items:center">
         <button class="primary" id="r-save">保存</button>
         <button class="ghost" id="r-cancel">取消</button>
@@ -337,9 +329,10 @@
     const bar = $("repobar");
     bar.innerHTML = '<span class="label">仓库</span>' + repos.map((r) => {
       const on = r.id === currentRepo ? " on" : "";
-      const tools = r.id === "main" ? "" :
-        '<span class="tools"><button data-act="rename" title="改名">✎</button>'
-        + '<button data-act="delrepo" title="删除">✕</button></span>';
+      const tools = '<span class="tools">'
+        + '<button data-act="settings" title="仓库设置">⚙</button>'
+        + (r.id === "main" ? "" : '<button data-act="delrepo" title="删除仓库">✕</button>')
+        + '</span>';
       return '<div class="repo' + on + '" data-id="' + esc(r.id) + '">'
         + '<span>' + esc(r.icon || "📁") + '</span><span>' + esc(r.name || r.id) + '</span>'
         + '<span class="n">' + (r.count || 0) + '</span>' + tools + '</div>';
@@ -369,8 +362,9 @@
     $("r-max").value = repo ? (repo.max_notes || 0) : 0;
     $("r-depth").value = String(repo ? (repo.tree_depth || 2) : 2);
     $("r-th").value = repo ? (repo.cluster_threshold || 0.6) : 0.6;
-    $("r-th-v").textContent = "当前 " + Number($("r-th").value).toFixed(2) + "（越低越容易合并）";
+    $("r-th-v").textContent = "当前阈值 " + Number($("r-th").value).toFixed(2) + "，数值越低越易归并";
     $("r-delete").hidden = !repo || repo.id === "main";
+    $("repo-title").textContent = repo ? (repo.id === "main" ? "主仓库设置" : "仓库设置") : "新建仓库";
     $("repo-modal").classList.add("open");
     setTimeout(() => $("r-name").focus(), 30);
   }
@@ -378,7 +372,7 @@
 
   async function saveRepo() {
     const name = $("r-name").value.trim();
-    if (!name) return toast("仓库名不能为空", true);
+    if (!name) return toast("仓库名称不可为空", true);
     const payload = {
       name: name,
       icon: $("r-icon").value.trim() || "📁",
@@ -593,7 +587,7 @@
     const act = e.target.closest("button[data-act]");
     if (act) {
       e.stopPropagation();
-      if (act.dataset.act === "rename") return openRepoModal(repos.find((r) => r.id === chip.dataset.id));
+      if (act.dataset.act === "settings") return openRepoModal(repos.find((r) => r.id === chip.dataset.id));
       if (act.dataset.act === "delrepo") return deleteRepo(chip.dataset.id);
       return;
     }
@@ -642,7 +636,7 @@
   $("r-cancel").onclick = closeRepoModal;
   $("repo-close").onclick = closeRepoModal;
   $("r-th").oninput = () => {
-    $("r-th-v").textContent = "当前 " + Number($("r-th").value).toFixed(2) + "（越低越容易合并）";
+    $("r-th-v").textContent = "当前阈值 " + Number($("r-th").value).toFixed(2) + "，数值越低越易归并";
   };
   $("r-delete").onclick = () => {
     if (!repoEditing) return;
