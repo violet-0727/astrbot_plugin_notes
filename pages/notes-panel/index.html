@@ -409,6 +409,7 @@
           + '<div class="sleaf">' + s.notes.map(leafHtml).join("") + '</div></div>';
       });
       inner += loose.map(leafHtml).join("");
+      if (!inner) inner = (g.notes || []).map(leafHtml).join("");  // 旧版后端兜底
       html += '<div class="branch' + (open ? " open" : "") + '" data-key="' + esc(g.tag) + '">'
         + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(g.tag) + '</span>'
         + '<span class="bcount">' + (g.count || g.notes.length) + '</span>'
