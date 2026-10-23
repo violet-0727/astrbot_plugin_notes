@@ -16,6 +16,7 @@
     --sh:0 1px 2px rgba(0,0,0,.5),0 16px 36px -22px rgba(0,0,0,.9);
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   body{margin:0;background:var(--bg);color:var(--fg);
     font:14px/1.65 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
   .wrap{max-width:1120px;margin:0 auto;padding:26px 20px 90px}
@@ -237,6 +238,7 @@
   const API = "/astrbot_plugin_notes";
   let bridge = null, repos = [], currentRepo = "main", notes = [], tree = null;
   let view = "tree", editing = null, query = "";
+  const branchState = new Map();  // 树枝展开状态，切页不丢
 
   const $ = (id) => document.getElementById(id);
   const ep = (p) => String(p || "").replace(/^\/+/, "");
@@ -386,14 +388,18 @@
     let html = "";
     groups.forEach((g, idx) => {
       const members = (g.members || []).filter((m) => m !== g.tag);
-      html += '<div class="branch' + (idx < 3 ? " open" : "") + '">'
+      const open = branchState.has(g.tag) ? branchState.get(g.tag) : idx < 3;
+      html += '<div class="branch' + (open ? " open" : "") + '" data-key="' + esc(g.tag) + '">'
         + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(g.tag) + '</span>'
         + '<span class="bcount">' + g.notes.length + '</span>'
         + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
         + '</div><div class="bleaf">' + g.notes.map(leafHtml).join("") + '</div></div>';
     });
     if (untagged.length) {
-      html += '<div class="branch open untagged"><div class="bhead"><span class="caret">▶</span>'
+      const key = "__untagged__";
+      const open = branchState.has(key) ? branchState.get(key) : true;
+      html += '<div class="branch' + (open ? " open" : "") + ' untagged" data-key="' + key + '">'
+        + '<div class="bhead"><span class="caret">▶</span>'
         + '<span class="bname">未分类</span><span class="bcount">' + untagged.length + '</span></div>'
         + '<div class="bleaf">' + untagged.map(leafHtml).join("") + '</div></div>';
     }
@@ -520,7 +526,13 @@
 
   $("tree").addEventListener("click", (e) => {
     const head = e.target.closest(".bhead");
-    if (head) { head.parentElement.classList.toggle("open"); return; }
+    if (head) {
+      const branch = head.parentElement;
+      branch.classList.toggle("open");
+      const key = branch.dataset.key || "";
+      if (key) branchState.set(key, branch.classList.contains("open"));
+      return;
+    }
     const leaf = e.target.closest(".leaf");
     if (!leaf) return;
     const note = notes.find((n) => n.id === leaf.dataset.id);
