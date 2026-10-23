@@ -55,7 +55,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.7.1",
+    "0.8.0",
     "",
 )
 class NotesPlugin(Star):
@@ -182,6 +182,8 @@ class NotesPlugin(Star):
         repos = self.repos.all()
         for repo in repos:
             repo["count"] = counts.get(repo["id"], 0)
+            limit = int(repo.get("max_notes") or 0)
+            repo["over"] = bool(limit and repo["count"] > limit)
         # 笔记里出现过但仓库表里没有的 id，兜底补上
         known = {r["id"] for r in repos}
         for repo_id, count in counts.items():
@@ -210,12 +212,21 @@ class NotesPlugin(Star):
                 name=payload.get("name"),
                 icon=payload.get("icon"),
                 order=payload.get("order"),
+                max_notes=payload.get("max_notes"),
+                tree_depth=payload.get("tree_depth"),
+                cluster_threshold=payload.get("cluster_threshold"),
             )
             return {"ok": bool(repo), "repo": repo}
         name = str(payload.get("name") or "").strip()
         if not name:
             return {"ok": False, "error": "仓库名不能为空"}
-        repo = self.repos.create(name, str(payload.get("icon") or "📁"))
+        repo = self.repos.create(
+            name,
+            str(payload.get("icon") or "📁"),
+            max_notes=payload.get("max_notes"),
+            tree_depth=payload.get("tree_depth"),
+            cluster_threshold=payload.get("cluster_threshold"),
+        )
         return {"ok": True, "repo": repo}
 
     def _cluster_tags(self, notes: list[dict], threshold: float = 0.6) -> list[dict]:
@@ -253,69 +264,77 @@ class NotesPlugin(Star):
         clusters.sort(key=lambda c: -c["weight"])
         return clusters
 
-    async def api_tree(self):
-        repo = self._query("repo") or "main"
-        notes = self.store.all(repo)
-        clusters = self._cluster_tags(notes)
-        tag_to_cluster: dict[str, int] = {}
+    def _build_tree(self, entries: list, depth: int, threshold: float, level: int = 0) -> tuple[list, list]:
+        """entries: [(note, [还有效的标签])] → (分组树, 落在本层没分组的笔记)。"""
+        if not entries:
+            return [], []
+        clusters = self._cluster_tags(
+            [{"tags": tags} for _note, tags in entries], threshold=threshold
+        )
+        if not clusters:
+            return [], [note for note, _tags in entries]
+
+        index: dict[str, int] = {}
         for idx, cluster in enumerate(clusters):
             for member in cluster["members"]:
-                tag_to_cluster[member] = idx
+                index[member] = idx
 
-        groups: list[dict] = [{"tag": c["label"], "members": c["members"], "notes": [], "weight": c["weight"]} for c in clusters]
-        untagged: list[dict] = []
+        buckets = [
+            {
+                "tag": c["label"],
+                "members": c["members"],
+                "level": level,
+                "notes": [],
+                "children": [],
+                "loose": [],
+            }
+            for c in clusters
+        ]
+        grouped: dict[int, list] = {i: [] for i in range(len(buckets))}
+        loose: list = []
+        for note, tags in entries:
+            hit = next((index[t] for t in tags if t in index), None)
+            if hit is None:
+                loose.append(note)
+                continue
+            used = set(buckets[hit]["members"])
+            grouped[hit].append((note, [t for t in tags if t not in used]))
+
+        for idx, bucket in enumerate(buckets):
+            items = grouped[idx]
+            bucket["notes"] = [note for note, _tags in items]
+            bucket["count"] = len(bucket["notes"])
+            if depth > 1 and len(items) > 1:
+                children, sub_loose = self._build_tree(items, depth - 1, threshold, level + 1)
+                bucket["children"] = children
+                bucket["loose"] = sub_loose
+            else:
+                bucket["loose"] = bucket["notes"]
+            bucket["loose_count"] = len(bucket["loose"])
+
+        nodes = [b for b in buckets if b["count"]]
+        nodes.sort(key=lambda b: -b["count"])
+        return nodes, loose
+
+    async def api_tree(self):
+        repo = self._query("repo") or "main"
+        repo_cfg = self.repos.get(repo) or {}
+        depth = int(repo_cfg.get("tree_depth") or 2)
+        threshold = float(repo_cfg.get("cluster_threshold") or 0.6)
+        notes = self.store.all(repo)
+
+        entries = []
         for note in notes:
             tags = [str(x).strip() for x in (note.get("tags") or []) if str(x).strip()]
-            idx = None
-            for tag in tags:
-                if tag in tag_to_cluster:
-                    idx = tag_to_cluster[tag]
-                    break
             note["trust_label"] = TRUST_LABEL.get(str(note.get("trust")), "未标注")
-            if idx is None:
-                untagged.append(note)
-            else:
-                groups[idx]["notes"].append(note)
-        # 二级分类：在每根主枝内部，按「剩下的标签」再分一层
-        for group in groups:
-            primary = set(group["members"])
-            sub_notes = []
-            for note in group["notes"]:
-                tags = [str(x).strip() for x in (note.get("tags") or []) if str(x).strip()]
-                rest = [tag for tag in tags if tag not in primary]
-                sub_notes.append({"note": note, "rest": rest})
-            sub_clusters = self._cluster_tags(
-                [{"tags": item["rest"]} for item in sub_notes]
-            )
-            sub_index: dict[str, int] = {}
-            for idx, cluster in enumerate(sub_clusters):
-                for member in cluster["members"]:
-                    sub_index[member] = idx
+            entries.append((note, tags))
 
-            buckets: list[dict] = [
-                {"tag": c["label"], "members": c["members"], "notes": []} for c in sub_clusters
-            ]
-            loose: list[dict] = []
-            for item in sub_notes:
-                note = item["note"]
-                placed = False
-                for tag in item["rest"]:
-                    if tag in sub_index:
-                        buckets[sub_index[tag]]["notes"].append(note)
-                        placed = True
-                        break
-                if not placed:
-                    loose.append(note)
-            group["subgroups"] = [b for b in buckets if b["notes"]]
-            group["subgroups"].sort(key=lambda b: -len(b["notes"]))
-            group["loose"] = loose
-            group["count"] = len(group["notes"])
-
-        groups = [g for g in groups if g["notes"]]
-        groups.sort(key=lambda g: -len(g["notes"]))
+        groups, untagged = self._build_tree(entries, depth, threshold)
         return {
             "ok": True,
             "repo": repo,
+            "depth": depth,
+            "threshold": threshold,
             "groups": groups,
             "untagged": untagged,
             "total": len(notes),

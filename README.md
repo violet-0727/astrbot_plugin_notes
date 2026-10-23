@@ -152,6 +152,19 @@
 
 新建 / 编辑笔记时可以选落到哪个仓库；导入的笔记默认落在当前仓库。
 
+### 仓库设置
+
+点仓库右边的 ✎（或「＋ 新建仓库」）打开设置弹窗：
+
+| 字段 | 作用 |
+|---|---|
+| 仓库名 / 图标 | 显示用，图标一个 emoji 即可 |
+| 记录阈值 | 该仓库建议容量，超出只在仓库标签上标红，**不会删任何笔记**；0 = 不限 |
+| 分类级数 | 1 / 2 / 3，决定树状图分几层 |
+| 标签合并松紧 | 0.3（松，容易合并）/ 0.95（严，只合并几乎一样的） |
+
+新建仓库也走这个弹窗，不再用浏览器 prompt。
+
 ### 树状图
 
 **树状图是默认首页**，顶部页签可以切到「列表」。树状图把标签相近的笔记并到同一根枝上：
@@ -189,7 +202,7 @@
 
 一条笔记有多个标签时，挂到它第一个标签所在的枝上，其余标签在列表视图里仍能看到。
 
-接口：`GET /repos`、`POST /repos/save`（create/update/delete）、`GET /tree?repo=`（返回 `groups[].subgroups[]` 与 `groups[].loose[]`）。
+接口：`GET /repos`（含 `max_notes`/`tree_depth`/`cluster_threshold`/`over`）、`POST /repos/save`（create/update/delete）、`GET /tree?repo=`（返回递归的 `groups[].children[]`、`groups[].loose[]`）。
 
 ## 配置
 

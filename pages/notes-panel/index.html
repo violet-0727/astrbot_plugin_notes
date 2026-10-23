@@ -110,6 +110,12 @@
   .sub.open .caret{transform:rotate(90deg)}
   .sleaf{display:none;margin-left:12px;padding-left:12px;border-left:1px dashed var(--line)}
   .sub.open .sleaf{display:block}
+  .lv1 .bname{font-size:13px}
+  .lv2 .bname{font-size:12.5px;font-weight:500}
+  .lv1 > .bhead{padding:7px 10px}
+  .lv2 > .bhead{padding:6px 10px}
+  .lv1 > .bleaf{margin-left:14px;padding-left:12px}
+  .lv2 > .bleaf{margin-left:12px;padding-left:10px}
   .untagged{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
 
   .empty{text-align:center;padding:54px 20px 44px;color:var(--muted)}
@@ -238,6 +244,41 @@
   </div>
 </div>
 
+<div class="modal" id="repo-modal">
+  <div class="sheet">
+    <header><h2 id="repo-title">新建仓库</h2><div style="flex:1"></div>
+      <button class="ghost" id="repo-close">✕</button></header>
+    <div class="pad">
+      <div class="row2">
+        <div class="field"><label>仓库名</label>
+          <input id="r-name" placeholder="游戏 / 学习 / 生活" /></div>
+        <div class="field"><label>图标（一个 emoji）</label>
+          <input id="r-icon" maxlength="4" placeholder="🎮" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>记录阈值（条，0 = 不限）</label>
+          <input id="r-max" type="number" min="0" max="5000" step="1" value="0" /></div>
+        <div class="field"><label>分类级数</label>
+          <select id="r-depth">
+            <option value="1">1 级 · 只看主标签</option>
+            <option value="2">2 级 · 主标签 → 次要标签</option>
+            <option value="3">3 级 · 再往下细分一层</option>
+          </select></div>
+      </div>
+      <div class="field"><label>标签合并松紧</label>
+        <input id="r-th" type="range" min="0.3" max="0.95" step="0.05" />
+        <div class="hint" id="r-th-v"></div></div>
+      <div class="hint">阈值只做提醒，不会自动删笔记；分类级数决定树状图分几层。</div>
+      <div style="display:flex;gap:9px;margin-top:14px;align-items:center">
+        <button class="primary" id="r-save">保存</button>
+        <button class="ghost" id="r-cancel">取消</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="r-delete" hidden>删掉仓库</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="file-input" accept=".json,.txt,.md" hidden />
 <div class="toast" id="toast"></div>
 
@@ -318,28 +359,51 @@
     } catch (e) { toast("读取仓库失败", true); }
   }
 
-  async function createRepo() {
-    const name = prompt("新仓库叫什么？（游戏 / 学习 / 生活…）");
-    if (!name) return;
-    const icon = prompt("图标（可留空）", "📁");
-    try {
-      const res = await post("repos/save", { action: "create", name: name, icon: icon || "📁" });
-      if (!res || !res.ok) throw new Error((res && res.error) || "创建失败");
-      currentRepo = res.repo.id;
-      tree = null;
-      await loadRepos(); await reload();
-      toast("仓库建好了");
-    } catch (e) { toast(e.message, true); }
+  let repoEditing = null;
+
+  function openRepoModal(repo) {
+    repoEditing = repo || null;
+    $("repo-title").textContent = repo ? "仓库设置" : "新建仓库";
+    $("r-name").value = repo ? repo.name || "" : "";
+    $("r-icon").value = repo ? repo.icon || "📁" : "📁";
+    $("r-max").value = repo ? (repo.max_notes || 0) : 0;
+    $("r-depth").value = String(repo ? (repo.tree_depth || 2) : 2);
+    $("r-th").value = repo ? (repo.cluster_threshold || 0.6) : 0.6;
+    $("r-th-v").textContent = "当前 " + Number($("r-th").value).toFixed(2) + "（越低越容易合并）";
+    $("r-delete").hidden = !repo || repo.id === "main";
+    $("repo-modal").classList.add("open");
+    setTimeout(() => $("r-name").focus(), 30);
   }
-  async function renameRepo(id) {
-    const repo = repos.find((r) => r.id === id);
-    const name = prompt("新的仓库名", repo ? repo.name : "");
-    if (!name) return;
-    const res = await post("repos/save", { action: "update", id: id, name: name });
-    if (res && res.ok) { await loadRepos(); toast("改好了"); } else toast("改名失败", true);
+  const closeRepoModal = () => { $("repo-modal").classList.remove("open"); repoEditing = null; };
+
+  async function saveRepo() {
+    const name = $("r-name").value.trim();
+    if (!name) return toast("仓库名不能为空", true);
+    const payload = {
+      name: name,
+      icon: $("r-icon").value.trim() || "📁",
+      max_notes: Number($("r-max").value || 0),
+      tree_depth: Number($("r-depth").value || 2),
+      cluster_threshold: Number($("r-th").value || 0.6)
+    };
+    try {
+      let res;
+      if (repoEditing) {
+        res = await post("repos/save", Object.assign({ action: "update", id: repoEditing.id }, payload));
+      } else {
+        res = await post("repos/save", Object.assign({ action: "create" }, payload));
+        if (res && res.ok && res.repo) currentRepo = res.repo.id;
+      }
+      if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
+      tree = null;
+      closeRepoModal();
+      await loadRepos(); await reload();
+      toast(repoEditing ? "仓库设置已保存" : "仓库建好了");
+    } catch (e) { toast(e.message || "保存失败", true); }
   }
   async function deleteRepo(id) {
     const repo = repos.find((r) => r.id === id);
+    if (repo && repo.id === "main") return toast("主仓库不能删", true);
     if (!confirm("删掉「" + (repo ? repo.name : id) + "」？里面的笔记会搬回主仓库，不会丢。")) return;
     const res = await post("repos/save", { action: "delete", id: id });
     if (res && res.ok) {
@@ -390,36 +454,31 @@
       + '<span class="badge ' + esc(n.trust || "") + '">' + esc(trustLabel(n)) + '</span>'
       + '<span class="d">' + fmtDate(n.updated_at) + '</span></div>';
   }
+  function renderNode(node, level, parentKey) {
+    const key = parentKey ? parentKey + "||" + node.tag : node.tag;
+    const open = branchState.has(key) ? branchState.get(key) : level === 0;
+    let inner = "";
+    (node.children || []).forEach((child) => { inner += renderNode(child, level + 1, key); });
+    inner += (node.loose || []).map(leafHtml).join("");
+    if (!inner) inner = (node.notes || []).map(leafHtml).join("");  // 旧后端兜底
+    const cls = "branch lv" + level + (open ? " open" : "");
+    const style = level ? ' style="margin-left:' + (level * 14) + 'px"' : "";
+    const members = (node.members || []).filter((m) => m !== node.tag);
+    return '<div class="' + cls + '" data-key="' + esc(key) + '"' + style + '>'
+      + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(node.tag) + '</span>'
+      + '<span class="bcount">' + (node.count || (node.notes || []).length) + '</span>'
+      + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
+      + '</div><div class="bleaf">' + inner + '</div></div>';
+  }
+
   function renderTree() {
     if (!tree) return;
     const groups = tree.groups || [], untagged = tree.untagged || [];
-    let html = "";
-    groups.forEach((g, idx) => {
-      const members = (g.members || []).filter((m) => m !== g.tag);
-      const open = branchState.has(g.tag) ? branchState.get(g.tag) : idx < 3;
-      const subs = g.subgroups || [];
-      const loose = g.loose || [];
-      let inner = "";
-      subs.forEach((s) => {
-        const skey = g.tag + "||" + s.tag;
-        const sopen = branchState.has(skey) ? branchState.get(skey) : true;
-        inner += '<div class="sub' + (sopen ? " open" : "") + '" data-key="' + esc(skey) + '">'
-          + '<div class="shead"><span class="caret">▶</span><span class="sname">' + esc(s.tag) + '</span>'
-          + '<span class="bcount">' + s.notes.length + '</span></div>'
-          + '<div class="sleaf">' + s.notes.map(leafHtml).join("") + '</div></div>';
-      });
-      inner += loose.map(leafHtml).join("");
-      if (!inner) inner = (g.notes || []).map(leafHtml).join("");  // 旧版后端兜底
-      html += '<div class="branch' + (open ? " open" : "") + '" data-key="' + esc(g.tag) + '">'
-        + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(g.tag) + '</span>'
-        + '<span class="bcount">' + (g.count || g.notes.length) + '</span>'
-        + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
-        + '</div><div class="bleaf">' + inner + '</div></div>';
-    });
+    let html = groups.map((g) => renderNode(g, 0, "")).join("");
     if (untagged.length) {
       const key = "__untagged__";
       const open = branchState.has(key) ? branchState.get(key) : true;
-      html += '<div class="branch' + (open ? " open" : "") + ' untagged" data-key="' + key + '">'
+      html += '<div class="branch untagged' + (open ? " open" : "") + '" data-key="' + key + '">'
         + '<div class="bhead"><span class="caret">▶</span>'
         + '<span class="bname">未分类</span><span class="bcount">' + untagged.length + '</span></div>'
         + '<div class="bleaf">' + untagged.map(leafHtml).join("") + '</div></div>';
@@ -427,6 +486,7 @@
     $("tree").innerHTML = html || ('<div class="empty" style="padding:40px"><h2>还没有分组的笔记</h2>'
       + '<p>给笔记加标签，这里就会长出树枝。</p></div>');
   }
+
   function render() {
     renderRepos();
     $("grid").hidden = view !== "list";
@@ -527,13 +587,13 @@
   }
 
   $("repobar").addEventListener("click", (e) => {
-    if (e.target.closest("#repo-add")) return createRepo();
+    if (e.target.closest("#repo-add")) return openRepoModal(null);
     const chip = e.target.closest(".repo");
     if (!chip || !chip.dataset.id) return;
     const act = e.target.closest("button[data-act]");
     if (act) {
       e.stopPropagation();
-      if (act.dataset.act === "rename") return renameRepo(chip.dataset.id);
+      if (act.dataset.act === "rename") return openRepoModal(repos.find((r) => r.id === chip.dataset.id));
       if (act.dataset.act === "delrepo") return deleteRepo(chip.dataset.id);
       return;
     }
@@ -577,6 +637,20 @@
     if (btn.dataset.act === "edit") openEditor(note);
     if (btn.dataset.act === "del") remove(note.id);
   });
+
+  $("r-save").onclick = saveRepo;
+  $("r-cancel").onclick = closeRepoModal;
+  $("repo-close").onclick = closeRepoModal;
+  $("r-th").oninput = () => {
+    $("r-th-v").textContent = "当前 " + Number($("r-th").value).toFixed(2) + "（越低越容易合并）";
+  };
+  $("r-delete").onclick = () => {
+    if (!repoEditing) return;
+    const id = repoEditing.id;
+    closeRepoModal();
+    deleteRepo(id);
+  };
+  $("repo-modal").addEventListener("click", (e) => { if (e.target.id === "repo-modal") closeRepoModal(); });
 
   $("btn-new").onclick = () => openEditor(null);
   $("btn-new2").onclick = () => openEditor(null);
