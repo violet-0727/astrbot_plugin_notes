@@ -102,6 +102,14 @@
   .leaf::before{content:"";position:absolute;left:-14px;top:19px;width:11px;border-top:1px dashed var(--line)}
   .leaf .t{font-size:13px;line-height:1.5}
   .leaf .d{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .sub{margin:2px 0}
+  .shead{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer;
+    font-size:13px;color:var(--muted);user-select:none}
+  .shead:hover{background:var(--field)}
+  .sname{font-weight:500;color:var(--fg)}
+  .sub.open .caret{transform:rotate(90deg)}
+  .sleaf{display:none;margin-left:12px;padding-left:12px;border-left:1px dashed var(--line)}
+  .sub.open .sleaf{display:block}
   .untagged{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
 
   .empty{text-align:center;padding:54px 20px 44px;color:var(--muted)}
@@ -389,11 +397,23 @@
     groups.forEach((g, idx) => {
       const members = (g.members || []).filter((m) => m !== g.tag);
       const open = branchState.has(g.tag) ? branchState.get(g.tag) : idx < 3;
+      const subs = g.subgroups || [];
+      const loose = g.loose || [];
+      let inner = "";
+      subs.forEach((s) => {
+        const skey = g.tag + "||" + s.tag;
+        const sopen = branchState.has(skey) ? branchState.get(skey) : true;
+        inner += '<div class="sub' + (sopen ? " open" : "") + '" data-key="' + esc(skey) + '">'
+          + '<div class="shead"><span class="caret">▶</span><span class="sname">' + esc(s.tag) + '</span>'
+          + '<span class="bcount">' + s.notes.length + '</span></div>'
+          + '<div class="sleaf">' + s.notes.map(leafHtml).join("") + '</div></div>';
+      });
+      inner += loose.map(leafHtml).join("");
       html += '<div class="branch' + (open ? " open" : "") + '" data-key="' + esc(g.tag) + '">'
         + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(g.tag) + '</span>'
-        + '<span class="bcount">' + g.notes.length + '</span>'
+        + '<span class="bcount">' + (g.count || g.notes.length) + '</span>'
         + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
-        + '</div><div class="bleaf">' + g.notes.map(leafHtml).join("") + '</div></div>';
+        + '</div><div class="bleaf">' + inner + '</div></div>';
     });
     if (untagged.length) {
       const key = "__untagged__";
@@ -525,6 +545,14 @@
   $("search").addEventListener("input", () => { query = $("search").value; if (view === "list") renderList(); });
 
   $("tree").addEventListener("click", (e) => {
+    const shead = e.target.closest(".shead");
+    if (shead) {
+      const subBranch = shead.parentElement;
+      subBranch.classList.toggle("open");
+      const skey = subBranch.dataset.key || "";
+      if (skey) branchState.set(skey, subBranch.classList.contains("open"));
+      return;
+    }
     const head = e.target.closest(".bhead");
     if (head) {
       const branch = head.parentElement;

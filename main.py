@@ -55,7 +55,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.6.2",
+    "0.7.0",
     "",
 )
 class NotesPlugin(Star):
@@ -276,6 +276,41 @@ class NotesPlugin(Star):
                 untagged.append(note)
             else:
                 groups[idx]["notes"].append(note)
+        # 二级分类：在每根主枝内部，按「剩下的标签」再分一层
+        for group in groups:
+            primary = set(group["members"])
+            sub_notes = []
+            for note in group["notes"]:
+                tags = [str(x).strip() for x in (note.get("tags") or []) if str(x).strip()]
+                rest = [tag for tag in tags if tag not in primary]
+                sub_notes.append({"note": note, "rest": rest})
+            sub_clusters = self._cluster_tags(
+                [{"tags": item["rest"]} for item in sub_notes]
+            )
+            sub_index: dict[str, int] = {}
+            for idx, cluster in enumerate(sub_clusters):
+                for member in cluster["members"]:
+                    sub_index[member] = idx
+
+            buckets: list[dict] = [
+                {"tag": c["label"], "members": c["members"], "notes": []} for c in sub_clusters
+            ]
+            loose: list[dict] = []
+            for item in sub_notes:
+                note = item["note"]
+                placed = False
+                for tag in item["rest"]:
+                    if tag in sub_index:
+                        buckets[sub_index[tag]]["notes"].append(note)
+                        placed = True
+                        break
+                if not placed:
+                    loose.append(note)
+            group["subgroups"] = [b for b in buckets if b["notes"]]
+            group["subgroups"].sort(key=lambda b: -len(b["notes"]))
+            group["loose"] = loose
+            group["count"] = len(group["notes"])
+
         groups = [g for g in groups if g["notes"]]
         groups.sort(key=lambda g: -len(g["notes"]))
         return {
