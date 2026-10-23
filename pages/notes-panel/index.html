@@ -57,6 +57,13 @@
   .seg button{border:0;background:transparent;padding:5px 14px;border-radius:8px;color:var(--muted);font-size:13px}
   .seg button.on{background:var(--accent);color:#fff}
 
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:5px;margin-bottom:14px;width:fit-content;box-shadow:var(--sh)}
+  .tab{border:0;background:transparent;color:var(--muted);padding:8px 20px;border-radius:9px;
+    font:inherit;cursor:pointer;transition:.15s}
+  .tab:hover{color:var(--fg)}
+  .tab.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px -6px var(--accent)}
+
   .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
   .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 13px;
     min-width:86px;box-shadow:var(--sh)}
@@ -150,6 +157,11 @@
 
   <div class="banner" id="banner">面板桥接还没就绪，正在重试…</div>
 
+  <div class="tabs" id="pagetabs">
+    <button class="tab on" data-page="tree">树状图</button>
+    <button class="tab" data-page="list">列表</button>
+  </div>
+
   <div class="repobar" id="repobar">
     <span class="label">仓库</span>
   </div>
@@ -160,10 +172,6 @@
         <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
       </svg>
       <input id="search" placeholder="搜索标题、正文、标签…" />
-    </div>
-    <div class="seg" id="viewseg">
-      <button data-view="list" class="on">列表</button>
-      <button data-view="tree">树状</button>
     </div>
   </div>
 
@@ -228,7 +236,7 @@
 (function () {
   const API = "/astrbot_plugin_notes";
   let bridge = null, repos = [], currentRepo = "main", notes = [], tree = null;
-  let view = "list", editing = null, query = "";
+  let view = "tree", editing = null, query = "";
 
   const $ = (id) => document.getElementById(id);
   const ep = (p) => String(p || "").replace(/^\/+/, "");
@@ -396,6 +404,7 @@
     renderRepos();
     $("grid").hidden = view !== "list";
     $("tree").hidden = view !== "tree";
+    document.querySelector(".bar").style.visibility = view === "list" ? "visible" : "hidden";
     if (view === "list") renderList(); else renderTree();
   }
 
@@ -418,7 +427,7 @@
 
   async function switchView(v) {
     view = v;
-    document.querySelectorAll("#viewseg button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
+    document.querySelectorAll("#pagetabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.page === v));
     if (view === "tree") {
       const t = await get("tree", { repo: currentRepo });
       tree = (t && t.ok) ? t : null;
@@ -506,7 +515,7 @@
     tree = null;
     loadRepos().then(reload);
   });
-  document.querySelectorAll("#viewseg button").forEach((b) => { b.onclick = () => switchView(b.dataset.view); });
+  document.querySelectorAll("#pagetabs .tab").forEach((b) => { b.onclick = () => switchView(b.dataset.page); });
   $("search").addEventListener("input", () => { query = $("search").value; if (view === "list") renderList(); });
 
   $("tree").addEventListener("click", (e) => {
