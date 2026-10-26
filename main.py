@@ -55,7 +55,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.8.1",
+    "0.8.2",
     "",
 )
 class NotesPlugin(Star):
@@ -505,6 +505,11 @@ class NotesPlugin(Star):
                 req.extra_user_content_parts = parts
             # 只对本次请求可见：mark_as_temp() 标记后不落历史，
             # 也不碰 req.system_prompt —— 避免每轮改写系统提示词击穿前缀缓存。
+            try:
+                from .inject_log import log_inject
+                log_inject(block)
+            except Exception:
+                pass
             parts.append(TextPart(text=block).mark_as_temp())
         except Exception as exc:
             logger.debug("[Notes] 记忆块注入失败: %s", exc)
