@@ -10,6 +10,7 @@ from astrbot.api import FunctionTool
 from astrbot.api.event import AstrMessageEvent
 
 from .fetch import fetch_url_text
+from .store import normalize_tags
 
 TRUST_LABEL = {
     "high": "可信（wiki/官方资料）",
@@ -113,7 +114,7 @@ class NotesWriteTool(FunctionTool):
             body=body,
             source=source,
             trust=trust,
-            tags=[str(t).strip() for t in (tags or []) if str(t).strip()],
+            tags=normalize_tags(tags),
         )
         return f"已记下：{note.get('title')}（{TRUST_LABEL.get(trust, trust)}，id={note.get('id')}）"
 
@@ -219,7 +220,7 @@ class NotesCorrectTool(FunctionTool):
             body=f"（{reason.strip() or '被用户指出有误'}）\n\n{old_body}",
             source=str(note.get("source") or ""),
             trust="untrusted",
-            tags=list(dict.fromkeys([*(note.get("tags") or []), "错误版本"])),
+            tags=normalize_tags([*normalize_tags(note.get("tags")), "错误版本"]),
             dedupe=False,
         )
         updated = self.store.update(note["id"], body=corrected_body)

@@ -35,6 +35,42 @@ def grams(text: str) -> set[str]:
     return {t[i : i + 2] for i in range(len(t) - 1)}
 
 
+_TAG_SPLIT = re.compile(r"[,，;；、\|/]+")
+MAX_TAGS = 12
+MAX_TAG_LEN = 24
+
+
+def normalize_tags(value: object) -> list[str]:
+    """把各种形态的标签输入整理成 list[str]。
+
+    * 字符串：按逗号/顿号/斜杠拆开（以前整串当一个标签，甚至被逐字拆开）
+    * 列表：逐个转字符串、去空白、去空值、去重
+    * 其它（None/数字/dict）：忽略
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raw: list[object] = _TAG_SPLIT.split(value)
+    elif isinstance(value, (list, tuple, set)):
+        raw = list(value)
+    else:
+        return []
+
+    out: list[str] = []
+    for item in raw:
+        if item is None:
+            continue
+        text = str(item).strip()
+        if not text:
+            continue
+        text = text[:MAX_TAG_LEN]
+        if text not in out:
+            out.append(text)
+        if len(out) >= MAX_TAGS:
+            break
+    return out
+
+
 class NoteStore:
     def __init__(self, path: str) -> None:
         self.path = path
@@ -58,6 +94,8 @@ class NoteStore:
                     except Exception:
                         continue  # 坏行跳过，不影响其它笔记
                     if isinstance(obj, dict) and obj.get("id"):
+                        # 老数据里 tags 可能是字符串（甚至被逐字拆开），读的时候就修回来
+                        obj["tags"] = normalize_tags(obj.get("tags"))
                         notes.append(obj)
         except FileNotFoundError:
             pass
@@ -89,6 +127,7 @@ class NoteStore:
         title = (title or "").strip()[:120]
         body = (body or "").strip()
         source = (source or "").strip()
+        tags = normalize_tags(tags)
         with self._lock:
             for note in (self._notes if dedupe else []):
                 if source and note.get("source") == source:
@@ -124,6 +163,8 @@ class NoteStore:
 
     def update(self, note_id: str, **fields: object) -> dict | None:
         allowed = {"title", "body", "source", "trust", "tags", "repo"}
+        if "tags" in fields:
+            fields["tags"] = normalize_tags(fields.get("tags"))
         with self._lock:
             for note in self._notes:
                 if note.get("id") == note_id:
@@ -229,8 +270,19 @@ class NoteStore:
         return scored[: max(1, limit)]
 
     def touch(self, note_id: str) -> None:
+        """记一次「被注入用到了」。攒一会儿再落盘，避免每次对话都重写文件。"""
         with self._lock:
             for note in self._notes:
                 if note.get("id") == note_id:
                     note["hits"] = int(note.get("hits") or 0) + 1
-                    return
+                    break
+            else:
+                return
+            now = time.time()
+            if now - getattr(self, "_touch_saved_at", 0.0) < 30:
+                return
+            self._touch_saved_at = now
+            try:
+                self._save_locked()
+            except Exception:
+                pass

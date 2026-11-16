@@ -22,7 +22,7 @@ from astrbot.core.agent.message import TextPart
 from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
 from .repos import RepoStore
-from .store import NoteStore, grams
+from .store import NoteStore, grams, normalize_tags
 from .tools import (
     TRUST_LABEL,
     TRUST_LEVELS,
@@ -55,7 +55,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.9.0",
+    "0.9.1",
     "",
 )
 class NotesPlugin(Star):
@@ -424,6 +424,7 @@ class NotesPlugin(Star):
         tags = payload.get("tags") or []
         if not isinstance(tags, list):
             tags = [str(tags)]
+        tags = normalize_tags(tags)
         # 面板里手动选的可信度优先；没选才按来源域名自动分级
         trust = str(payload.get("trust") or "").strip().lower()
         if trust not in TRUST_LEVELS:
