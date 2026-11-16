@@ -1,0 +1,52 @@
+{
+  "enabled": {
+    "type": "bool",
+    "description": "总开关。关闭后工具和自动注入都不生效，数据保留。",
+    "default": true
+  },
+  "inject_enabled": {
+    "type": "bool",
+    "description": "是否在对话时自动把相关笔记带进上下文。",
+    "default": true
+  },
+  "inject_limit": {
+    "type": "int",
+    "description": "每轮最多注入几条笔记（1-5）。",
+    "default": 2
+  },
+  "min_score": {
+    "type": "float",
+    "description": "检索命中阈值。越高越保守，1.0 左右适合大多数情况；觉得她总把无关笔记带进来就调高。",
+    "default": 1.0
+  },
+  "always_hint": {
+    "type": "bool",
+    "description": "保留项：为兼容旧配置预留，当前版本不额外注入常驻提示。",
+    "default": false
+  },
+  "fetch_enabled": {
+    "type": "bool",
+    "description": "是否允许她抓网页（notes_fetch）。关闭后只能靠搜索工具给的内容。",
+    "default": true
+  },
+  "fetch_timeout": {
+    "type": "float",
+    "description": "抓网页超时秒数。",
+    "default": 20.0
+  },
+  "fetch_max_chars": {
+    "type": "int",
+    "description": "单页最多返回多少字符，防止把上下文塞满。",
+    "default": 6000
+  },
+  "wiki_domains": {
+    "type": "string",
+    "description": "可信来源域名，逗号分隔。命中这些域名的笔记标为「可信」。",
+    "default": "huijiwiki.com,fandom.com,wiki.gg,gamekee.com,mihoyo.com"
+  },
+  "guide_domains": {
+    "type": "string",
+    "description": "一般来源域名，逗号分隔。命中标为「一般」，其余一律「存疑」。",
+    "default": "bilibili.com,nga.cn,tieba.baidu.com,game8.jp"
+  }
+}

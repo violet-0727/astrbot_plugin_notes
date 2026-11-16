@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>她自己的笔记本</title>
+<style>
+  :root{
+    --bg:#eef3fa;--panel:#fff;--fg:#16202e;--muted:#6b7c93;--line:#dbe4f0;--field:#f6f9fe;
+    --accent:#2f6feb;--accent2:#63a4ff;--soft:#e8f0ff;--ok:#1f9d6b;--warn:#c2410c;
+    --sh:0 1px 2px rgba(22,45,90,.06),0 12px 28px -16px rgba(22,45,90,.22);
+  }
+  [data-theme="dark"]{
+    --bg:#0b1119;--panel:#111a26;--fg:#e6eefb;--muted:#8ea2bd;--line:#1e2b3d;--field:#0f1722;
+    --accent:#64a0ff;--accent2:#3d7ce0;--soft:#14233a;--ok:#4ade80;--warn:#fb923c;
+    --sh:0 1px 2px rgba(0,0,0,.5),0 16px 36px -22px rgba(0,0,0,.9);
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 20px 90px}
+  .hero{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin-bottom:14px}
+  .hero h1{margin:0 0 4px;font-size:21px}
+  .hero p{margin:0;color:var(--muted);font-size:13px}
+  .hero .sp{flex:1}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{font:inherit;cursor:pointer;border-radius:10px;padding:8px 13px;border:1px solid var(--line);
+    background:var(--panel);color:var(--fg);transition:.15s;white-space:nowrap}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.ghost{background:transparent}
+  button.mini{padding:4px 9px;font-size:12px;border-radius:8px}
+  button.danger{color:var(--warn)}
+
+  .repobar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin-bottom:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+  .repobar .label{font-size:12px;color:var(--muted);margin-right:2px}
+  .repo{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:10px;cursor:pointer;
+    border:1px solid transparent;transition:.15s;font-size:13px}
+  .repo:hover{background:var(--field)}
+  .repo.on{background:var(--soft);border-color:var(--accent);color:var(--accent)}
+  .repo .n{font-size:11px;opacity:.7;border:1px solid currentColor;border-radius:999px;padding:0 6px;line-height:1.5}
+  .repo.add{border:1px dashed var(--line);color:var(--muted)}
+  .repo.add:hover{border-color:var(--accent);color:var(--accent)}
+  .repo .tools{display:none;gap:2px;margin-left:2px}
+  .repo.on .tools{display:flex}
+  .repo .tools button{padding:0 5px;font-size:11px;background:transparent;border:0;color:inherit;opacity:.65}
+  .repo .tools button:hover{opacity:1}
+
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .search{position:relative;flex:1 1 240px;max-width:400px}
+  .search input{width:100%;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);color:var(--fg);font:inherit;outline:none}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.45}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;padding:5px 14px;border-radius:8px;color:var(--muted);font-size:13px}
+  .seg button.on{background:var(--accent);color:#fff}
+
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:5px;margin-bottom:14px;width:fit-content;box-shadow:var(--sh)}
+  .tab{border:0;background:transparent;color:var(--muted);padding:8px 20px;border-radius:9px;
+    font:inherit;cursor:pointer;transition:.15s}
+  .tab:hover{color:var(--fg)}
+  .tab.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px -6px var(--accent)}
+
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 13px;
+    min-width:86px;box-shadow:var(--sh)}
+  .stat b{display:block;font-size:18px;line-height:1.25}
+  .stat span{font-size:12px;color:var(--muted)}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:var(--sh);
+    display:flex;flex-direction:column}
+  .card h3{margin:0 0 7px;font-size:15px;display:flex;gap:8px;align-items:flex-start}
+  .meta{display:flex;flex-wrap:wrap;gap:9px;font-size:12px;color:var(--muted);margin-bottom:7px}
+  .body{white-space:pre-wrap;font-size:13px;opacity:.92;display:-webkit-box;-webkit-line-clamp:6;
+    -webkit-box-orient:vertical;overflow:hidden}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+  .tag{font-size:11.5px;padding:1px 8px;border-radius:999px;background:var(--field);border:1px solid var(--line);color:var(--muted)}
+  .foot{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+  .badge{font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);flex:none}
+  .badge.high{color:var(--ok);border-color:var(--ok)}
+  .badge.untrusted{color:var(--warn);border-color:var(--warn)}
+
+  .tree{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh);
+    padding:8px 6px}
+  .branch{padding:2px 0}
+  .bhead{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;user-select:none}
+  .bhead:hover{background:var(--field)}
+  .caret{width:12px;color:var(--muted);font-size:10px;transition:.18s}
+  .branch.open > .bhead .caret{transform:rotate(90deg)}
+  .bname{font-weight:600;font-size:14px}
+  .bcount{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+  .bmembers{font-size:11.5px;color:var(--muted);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bhead .bact{margin-left:auto;padding:0 7px;font-size:12px;line-height:1.6;border-radius:7px;
+  background:transparent;border:1px solid transparent;color:var(--muted);opacity:0;transition:.12s}
+.bhead:hover .bact{opacity:1}
+.bhead .bact:hover{border-color:var(--line);background:var(--field);color:var(--accent)}
+  .bleaf{display:none;margin-left:22px;padding-left:14px;border-left:1px dashed var(--line)}
+  .branch.open > .bleaf{display:block}
+  .leaf{position:relative;display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:9px;cursor:pointer}
+  .leaf:hover{background:var(--field)}
+  .leaf::before{content:"";position:absolute;left:-14px;top:19px;width:11px;border-top:1px dashed var(--line)}
+  .leaf .t{font-size:13px;line-height:1.5}
+  .leaf .d{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .lv1 .bname{font-size:13px}
+  .lv2 .bname{font-size:12.5px;font-weight:500}
+  .lv1 > .bhead{padding:7px 10px}
+  .lv2 > .bhead{padding:6px 10px}
+  .lv1 > .bleaf{margin-left:14px;padding-left:12px}
+  .lv2 > .bleaf{margin-left:12px;padding-left:10px}
+  .untagged{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
+
+  .empty{text-align:center;padding:54px 20px 44px;color:var(--muted)}
+  .empty .art{width:88px;height:88px;margin:0 auto 14px;border-radius:24px;display:grid;place-items:center;
+    background:var(--soft);color:var(--accent)}
+  .empty h2{margin:0 0 6px;font-size:16px;color:var(--fg)}
+  .empty p{margin:0 0 14px;font-size:13px}
+  .empty .btns{justify-content:center}
+
+  .modal{position:fixed;inset:0;background:rgba(10,20,40,.5);display:none;align-items:center;justify-content:center;
+    padding:20px;z-index:60}
+  .modal.open{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:min(680px,100%);
+    max-height:88vh;overflow:auto;box-shadow:0 24px 60px -20px rgba(10,30,70,.45)}
+  .sheet header{display:flex;align-items:center;gap:12px;padding:18px 20px 0}
+  .sheet header h2{margin:0;font-size:16px}
+  .pad{padding:14px 20px 20px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .field input,.field textarea,.field select{width:100%;font:inherit;padding:9px 11px;border-radius:10px;
+    border:1px solid var(--line);background:var(--field);color:var(--fg);outline:none}
+  .field textarea{min-height:140px;resize:vertical}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--panel);
+    border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 16px;border-radius:10px;
+    box-shadow:var(--sh);opacity:0;pointer-events:none;transition:.2s;font-size:13px;z-index:80}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.error{border-left-color:var(--warn)}
+  .banner{display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:var(--soft);
+    color:var(--accent);font-size:13px}
+  .banner.show{display:block}
+  @media(max-width:640px){
+    .wrap{padding:18px 14px 80px}.grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <h1>她自己的笔记本 <span id="ver" style="font-size:12px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:middle"></span></h1>
+      <p>查到的东西存在这里。按仓库分开，同类的笔记会在树状图里归到一根枝上。</p>
+    </div>
+    <div class="sp"></div>
+    <div class="btns">
+      <button class="primary" id="btn-new">＋ 新建笔记</button>
+      <button class="ghost" id="btn-refresh">刷新</button>
+      <button class="ghost" id="btn-export">导出</button>
+      <button class="ghost" id="btn-import">导入</button>
+    </div>
+  </div>
+
+  <div class="banner" id="banner">面板桥接还没就绪，正在重试…</div>
+
+  <div class="tabs" id="pagetabs">
+    <button class="tab on" data-page="tree">主页</button>
+    <button class="tab" data-page="list">列表</button>
+  </div>
+
+  <div class="repobar" id="repobar">
+    <span class="label">仓库</span>
+  </div>
+
+  <div class="bar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+      </svg>
+      <input id="search" placeholder="搜索标题、正文、标签…" />
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="grid" id="grid"></div>
+  <div class="tree" id="tree" hidden></div>
+
+  <div class="empty" id="empty" hidden>
+    <div class="art">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5z"></path>
+        <path d="M8 7h7M8 11h7M8 15h4"></path>
+      </svg>
+    </div>
+    <h2>这个仓库还是空的</h2>
+    <p>写一条，或者从别的来源导入。</p>
+    <div class="btns"><button class="primary" id="btn-new2">＋ 新建第一条</button></div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <header><h2 id="sheet-title">新建笔记</h2><div style="flex:1"></div>
+      <button class="ghost" id="btn-close">✕</button></header>
+    <div class="pad">
+      <div class="field"><label>标题</label>
+        <input id="f-title" placeholder="一句话说清这条记的是什么" /></div>
+      <div class="field"><label>正文</label>
+        <textarea id="f-body" placeholder="具体的结论、细节"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>仓库</label><select id="f-repo"></select></div>
+        <div class="field"><label>可信度</label>
+          <select id="f-trust">
+            <option value="">按来源自动判断</option>
+            <option value="high">可信</option>
+            <option value="medium">一般</option>
+            <option value="low">存疑</option>
+            <option value="untrusted">不可信</option>
+          </select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>来源链接</label>
+          <input id="f-source" placeholder="https://…" /></div>
+        <div class="field"><label>标签（逗号分隔，会用来分树枝）</label>
+          <input id="f-tags" placeholder="雷横默, 装备" /></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:12px;align-items:center">
+        <button class="primary" id="btn-save">保存</button>
+        <button class="ghost" id="btn-cancel">取消</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="btn-delete" hidden>删掉这条</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="repo-modal">
+  <div class="sheet">
+    <header><h2 id="repo-title">新建仓库</h2><div style="flex:1"></div>
+      <button class="ghost" id="repo-close">✕</button></header>
+    <div class="pad">
+      <div class="row2">
+        <div class="field"><label>仓库名称</label>
+          <input id="r-name" placeholder="例：游戏、学习、日常" /></div>
+        <div class="field"><label>仓库标记</label>
+          <input id="r-icon" maxlength="4" placeholder="例：🎮" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>容量上限（条，0 表示不限）</label>
+          <input id="r-max" type="number" min="0" max="5000" step="1" value="0" /></div>
+        <div class="field"><label>归类层数</label>
+          <select id="r-depth">
+            <option value="1">一级 · 仅按主标签归档</option>
+            <option value="2">二级 · 主标签下再分次要标签</option>
+            <option value="3">三级 · 次要标签下继续细分</option>
+          </select></div>
+      </div>
+      <div class="field"><label>归并阈值</label>
+        <input id="r-th" type="range" min="0.3" max="0.95" step="0.05" />
+        <div class="hint" id="r-th-v"></div></div>
+      <div class="hint">容量上限仅用于提示，不删除任何笔记；归类层数决定主页目录的分级深度。</div>
+      <div style="display:flex;gap:9px;margin-top:14px;align-items:center">
+        <button class="primary" id="r-save">保存</button>
+        <button class="ghost" id="r-cancel">取消</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="r-delete" hidden>删掉仓库</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="tag-modal">
+  <div class="sheet">
+    <header><h2 id="tag-title">管理标签</h2><div style="flex:1"></div>
+      <button class="ghost" id="tag-close">✕</button></header>
+    <div class="pad">
+      <div class="field"><label>标签名</label>
+        <input id="t-name" /></div>
+      <div class="field"><label>这一簇里还算在一起的写法（逗号分隔）</label>
+        <input id="t-members" placeholder="留空就只改这一个标签" /></div>
+      <div class="hint" id="t-count"></div>
+      <div class="row2" style="margin-top:10px">
+        <div class="field"><label>搬到别的仓库</label>
+          <select id="t-repo"></select></div>
+        <div class="field"><label>&nbsp;</label>
+          <button id="t-move">全部搬过去</button></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:16px;align-items:center">
+        <button class="primary" id="t-rename">保存改名</button>
+        <button class="ghost" id="t-cancel">取消</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="t-delete">删掉这个标签</button>
+      </div>
+      <div class="hint" style="margin-top:10px">删掉标签只是不再给这些笔记打这个标签，笔记本身不会丢。</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="ask-modal">
+  <div class="sheet" style="width:min(420px,100%)">
+    <header><h2 id="ask-title">确认</h2></header>
+    <div class="pad">
+      <div id="ask-text" style="font-size:13.5px;line-height:1.7"></div>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button class="primary" id="ask-ok">确定</button>
+        <button class="ghost" id="ask-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".json,.txt,.md" hidden />
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const API = "/astrbot_plugin_notes";
+  let bridge = null, repos = [], currentRepo = "main", notes = [], tree = null;
+  let view = "tree", editing = null, query = "";
+  const branchState = new Map();  // 树枝展开状态，切页不丢
+
+  // 面板在 iframe 里，window.confirm 会被浏览器拦掉（点了没反应），
+  // 所以自己画一个确认框。
+  function askConfirm(text, okText) {
+    return new Promise((resolve) => {
+      const modal = $("ask-modal");
+      $("ask-text").textContent = text;
+      $("ask-ok").textContent = okText || "确定";
+      modal.classList.add("open");
+      const done = (value) => {
+        modal.classList.remove("open");
+        $("ask-ok").onclick = null;
+        $("ask-cancel").onclick = null;
+        resolve(value);
+      };
+      $("ask-ok").onclick = () => done(true);
+      $("ask-cancel").onclick = () => done(false);
+    });
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const ep = (p) => String(p || "").replace(/^\/+/, "");
+
+  async function ensureBridge() {
+    if (window.AstrBotPluginPage) { bridge = window.AstrBotPluginPage; return true; }
+    const t0 = Date.now();
+    while (Date.now() - t0 < 6000) {
+      await new Promise((r) => setTimeout(r, 60));
+      if (window.AstrBotPluginPage) { bridge = window.AstrBotPluginPage; return true; }
+    }
+    return false;
+  }
+  function get(path, params) {
+    if (bridge && bridge.apiGet) return bridge.apiGet(ep(path), params);
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return fetch("/api/plug" + API + path + qs, { credentials: "include" }).then((r) => r.json());
+  }
+  function post(path, body) {
+    if (bridge && bridge.apiPost) return bridge.apiPost(ep(path), body);
+    return fetch("/api/plug" + API + path, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {})
+    }).then((r) => r.json());
+  }
+  function toast(msg, bad) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.className = "toast show" + (bad ? " error" : "");
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => (el.className = "toast"), 2600);
+  }
+  const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function fmtDate(ts) {
+    const d = new Date(Number(ts || 0) * 1000);
+    if (!isFinite(d.getTime()) || d.getFullYear() < 2000) return "";
+    const p = (x) => String(x).padStart(2, "0");
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+  }
+  function trustLabel(n) {
+    return n.trust_label || ({ high: "可信", medium: "一般", low: "存疑", untrusted: "不可信" })[n.trust] || "未标注";
+  }
+
+  function renderRepos() {
+    const bar = $("repobar");
+    bar.innerHTML = '<span class="label">仓库</span>' + repos.map((r) => {
+      const on = r.id === currentRepo ? " on" : "";
+      const tools = '<span class="tools">'
+        + '<button data-act="settings" title="仓库设置">⚙</button>'
+        + (r.id === "main" ? "" : '<button data-act="delrepo" title="删除仓库">✕</button>')
+        + '</span>';
+      return '<div class="repo' + on + '" data-id="' + esc(r.id) + '">'
+        + '<span>' + esc(r.icon || "📁") + '</span><span>' + esc(r.name || r.id) + '</span>'
+        + '<span class="n">' + (r.count || 0) + '</span>' + tools + '</div>';
+    }).join("") + '<div class="repo add" id="repo-add">＋ 新建仓库</div>';
+    const sel = $("f-repo");
+    sel.innerHTML = repos.map((r) =>
+      '<option value="' + esc(r.id) + '">' + esc((r.icon || "") + " " + (r.name || r.id)) + '</option>').join("");
+    sel.value = currentRepo;
+  }
+
+  async function loadRepos() {
+    try {
+      const data = await get("repos");
+      repos = (data && data.repos) || [];
+      if (!repos.some((r) => r.id === currentRepo)) currentRepo = repos[0] ? repos[0].id : "main";
+      renderRepos();
+    } catch (e) { toast("读取仓库失败", true); }
+  }
+
+  let repoEditing = null;
+
+  function openRepoModal(repo) {
+    repoEditing = repo || null;
+    $("repo-title").textContent = repo ? "仓库设置" : "新建仓库";
+    $("r-name").value = repo ? repo.name || "" : "";
+    $("r-icon").value = repo ? repo.icon || "📁" : "📁";
+    $("r-max").value = repo ? (repo.max_notes || 0) : 0;
+    $("r-depth").value = String(repo ? (repo.tree_depth || 2) : 2);
+    $("r-th").value = repo ? (repo.cluster_threshold || 0.6) : 0.6;
+    $("r-th-v").textContent = "当前阈值 " + Number($("r-th").value).toFixed(2) + "，数值越低越易归并";
+    $("r-delete").hidden = !repo || repo.id === "main";
+    $("repo-title").textContent = repo ? (repo.id === "main" ? "主仓库设置" : "仓库设置") : "新建仓库";
+    $("repo-modal").classList.add("open");
+    setTimeout(() => $("r-name").focus(), 30);
+  }
+  const closeRepoModal = () => { $("repo-modal").classList.remove("open"); repoEditing = null; };
+
+  let tagEditing = null;
+
+  function findNode(groups, tag) {
+    for (const g of groups || []) {
+      if (g.tag === tag) return g;
+      const hit = findNode(g.children || [], tag);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function openTagModal(tag, members) {
+    tagEditing = { tag: tag, members: members || [] };
+    $("tag-title").textContent = "管理标签 · " + tag;
+    $("t-name").value = tag;
+    $("t-members").value = (members || []).filter((m) => m !== tag).join(", ");
+    const count = notes.filter((n) =>
+      [tag].concat(members || []).some((t) => (n.tags || []).indexOf(t) >= 0)).length;
+    $("t-count").textContent = "这个仓库里有 " + count + " 条笔记带这个标签。";
+    $("t-repo").innerHTML = repos.filter((r) => r.id !== currentRepo)
+      .map((r) => '<option value="' + esc(r.id) + '">' + esc((r.icon || "") + " " + (r.name || r.id)) + '</option>')
+      .join("");
+    $("tag-modal").classList.add("open");
+    setTimeout(() => $("t-name").focus(), 30);
+  }
+
+  const closeTagModal = () => { $("tag-modal").classList.remove("open"); tagEditing = null; };
+
+  function tagPayload(extra) {
+    return Object.assign({
+      repo: currentRepo,
+      tag: tagEditing.tag,
+      members: $("t-members").value.split(/[,，]/).map((x) => x.trim()).filter(Boolean)
+    }, extra || {});
+  }
+
+  async function tagAction(action, extra, okMsg) {
+    if (!tagEditing) return;
+    try {
+      const res = await post("tags/save", tagPayload(Object.assign({ action: action }, extra || {})));
+      if (!res || !res.ok) throw new Error((res && res.error) || "操作失败");
+      closeTagModal();
+      tree = null;
+      await loadRepos(); await reload();
+      toast(okMsg || "改好了");
+    } catch (e) { toast(e.message || "操作失败", true); }
+  }
+
+  async function saveRepo() {
+    const name = $("r-name").value.trim();
+    if (!name) return toast("仓库名称不可为空", true);
+    const payload = {
+      name: name,
+      icon: $("r-icon").value.trim() || "📁",
+      max_notes: Number($("r-max").value || 0),
+      tree_depth: Number($("r-depth").value || 2),
+      cluster_threshold: Number($("r-th").value || 0.6)
+    };
+    try {
+      let res;
+      if (repoEditing) {
+        res = await post("repos/save", Object.assign({ action: "update", id: repoEditing.id }, payload));
+      } else {
+        res = await post("repos/save", Object.assign({ action: "create" }, payload));
+        if (res && res.ok && res.repo) currentRepo = res.repo.id;
+      }
+      if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
+      tree = null;
+      closeRepoModal();
+      await loadRepos(); await reload();
+      toast(repoEditing ? "仓库设置已保存" : "仓库建好了");
+    } catch (e) { toast(e.message || "保存失败", true); }
+  }
+  async function deleteRepo(id) {
+    const repo = repos.find((r) => r.id === id);
+    if (repo && repo.id === "main") return toast("主仓库不能删", true);
+    const sure = await askConfirm(
+      "删掉「" + (repo ? repo.name : id) + "」？里面的笔记会搬回主仓库，不会丢。", "删掉");
+    if (!sure) return;
+    const res = await post("repos/save", { action: "delete", id: id });
+    if (res && res.ok) {
+      currentRepo = "main"; tree = null;
+      await loadRepos(); await reload();
+      toast("已删除，笔记搬回主仓库");
+    } else toast((res && res.error) || "删除失败", true);
+  }
+
+  function visible(items) {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((n) =>
+      String(n.title || "").toLowerCase().includes(q) ||
+      String(n.body || "").toLowerCase().includes(q) ||
+      (n.tags || []).join(" ").toLowerCase().includes(q));
+  }
+  async function loadVersion() {
+    try {
+      const s = await get("stats");
+      if (s && s.version) $("ver").textContent = "v" + s.version;
+    } catch (e) { /* 读不到就不显示 */ }
+  }
+
+  function renderStats(stats) {
+    const s = stats || {}, by = s.by_trust || {};
+    $("stats").innerHTML = [
+      '<div class="stat"><b>' + (s.total || 0) + '</b><span>本仓库笔记</span></div>',
+      '<div class="stat"><b>' + (by.high || 0) + '</b><span>可信</span></div>',
+      '<div class="stat"><b>' + (by.low || 0) + '</b><span>存疑</span></div>',
+      '<div class="stat"><b>' + Object.keys(s.tags || {}).length + '</b><span>标签数</span></div>'
+    ].join("");
+  }
+  function renderList() {
+    const shown = visible(notes), empty = shown.length === 0;
+    $("empty").hidden = !empty;
+    $("grid").hidden = empty;
+    $("empty").querySelector("h2").textContent = notes.length ? "没有匹配的笔记" : "这个仓库还是空的";
+    $("grid").innerHTML = shown.map((n) => {
+      const tags = (n.tags || []).map((t) => '<span class="tag">' + esc(t) + '</span>').join("");
+      return '<div class="card" data-id="' + esc(n.id) + '">'
+        + '<h3><span>' + esc(n.title) + '</span><span class="badge ' + esc(n.trust || "") + '">'
+        + esc(trustLabel(n)) + '</span></h3>'
+        + '<div class="meta"><span>' + fmtDate(n.updated_at) + '</span>'
+        + (n.source ? '<span>' + esc(String(n.source).slice(0, 42)) + '</span>' : '')
+        + '<span>用了 ' + Number(n.hits || 0) + ' 次</span></div>'
+        + '<div class="body">' + esc(n.body) + '</div>'
+        + (tags ? '<div class="tags">' + tags + '</div>' : '')
+        + '<div class="foot"><button class="mini" data-act="edit">编辑</button>'
+        + '<button class="mini danger" data-act="del">删除</button></div></div>';
+    }).join("");
+  }
+  function leafHtml(n) {
+    return '<div class="leaf" data-id="' + esc(n.id) + '"><span class="t">' + esc(n.title) + '</span>'
+      + '<span class="badge ' + esc(n.trust || "") + '">' + esc(trustLabel(n)) + '</span>'
+      + '<span class="d">' + fmtDate(n.updated_at) + '</span></div>';
+  }
+  function renderNode(node, level, parentKey) {
+    const key = parentKey ? parentKey + "||" + node.tag : node.tag;
+    const open = branchState.has(key) ? branchState.get(key) : level === 0;
+    let inner = "";
+    (node.children || []).forEach((child) => { inner += renderNode(child, level + 1, key); });
+    inner += (node.loose || []).map(leafHtml).join("");
+    if (!inner) inner = (node.notes || []).map(leafHtml).join("");  // 旧后端兜底
+    const cls = "branch lv" + level + (open ? " open" : "");
+    const style = level ? ' style="margin-left:' + (level * 14) + 'px"' : "";
+    const members = (node.members || []).filter((m) => m !== node.tag);
+    return '<div class="' + cls + '" data-key="' + esc(key) + '"' + style + '>'
+      + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(node.tag) + '</span>'
+      + '<span class="bcount">' + (node.count || (node.notes || []).length) + '</span>'
+      + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
+      + (node.tag === "未分类" ? ""
+        : '<button class="bact" data-tact="manage" title="管理这个标签">⋯</button>')
+      + '</div><div class="bleaf">' + inner + '</div></div>';
+  }
+
+  function renderTree() {
+    if (!tree) return;
+    const groups = tree.groups || [], untagged = tree.untagged || [];
+    let html = groups.map((g) => renderNode(g, 0, "")).join("");
+    if (untagged.length) {
+      const key = "__untagged__";
+      const open = branchState.has(key) ? branchState.get(key) : true;
+      html += '<div class="branch untagged' + (open ? " open" : "") + '" data-key="' + key + '">'
+        + '<div class="bhead"><span class="caret">▶</span>'
+        + '<span class="bname">未分类</span><span class="bcount">' + untagged.length + '</span></div>'
+        + '<div class="bleaf">' + untagged.map(leafHtml).join("") + '</div></div>';
+    }
+    $("tree").innerHTML = html || ('<div class="empty" style="padding:40px"><h2>还没有分组的笔记</h2>'
+      + '<p>给笔记加标签，这里就会长出树枝。</p></div>');
+  }
+
+  function render() {
+    renderRepos();
+    $("grid").hidden = view !== "list";
+    $("tree").hidden = view !== "tree";
+    document.querySelector(".bar").style.visibility = view === "list" ? "visible" : "hidden";
+    if (view === "list") renderList(); else renderTree();
+  }
+
+  async function reload() {
+    try {
+      const data = await get("list", { repo: currentRepo });
+      if (!data || !data.ok) throw new Error("读取失败");
+      notes = data.items || [];
+      renderStats(data.stats);
+      if (view === "tree") {
+        const t = await get("tree", { repo: currentRepo });
+        tree = (t && t.ok) ? t : null;
+      }
+      render();
+    } catch (e) {
+      $("banner").classList.add("show");
+      $("banner").textContent = "加载失败：" + (e && e.message ? e.message : e);
+    }
+  }
+
+  async function switchView(v) {
+    view = v;
+    document.querySelectorAll("#pagetabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.page === v));
+    if (view === "tree") {
+      const t = await get("tree", { repo: currentRepo });
+      tree = (t && t.ok) ? t : null;
+    }
+    render();
+  }
+
+  function openEditor(note) {
+    editing = note || null;
+    $("sheet-title").textContent = note ? "编辑笔记" : "新建笔记";
+    $("f-title").value = note ? note.title || "" : "";
+    $("f-body").value = note ? note.body || "" : "";
+    $("f-source").value = note ? note.source || "" : "";
+    $("f-tags").value = note ? (note.tags || []).join(", ") : "";
+    $("f-trust").value = note ? note.trust || "" : "";
+    $("f-repo").value = note ? (note.repo || currentRepo) : currentRepo;
+    $("btn-delete").hidden = !note;
+    $("modal").classList.add("open");
+    setTimeout(() => $("f-title").focus(), 30);
+  }
+  const closeEditor = () => { $("modal").classList.remove("open"); editing = null; };
+
+  async function save() {
+    const payload = {
+      id: editing ? editing.id : "",
+      title: $("f-title").value.trim(),
+      body: $("f-body").value.trim(),
+      source: $("f-source").value.trim(),
+      tags: $("f-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
+      trust: $("f-trust").value,
+      repo: $("f-repo").value || currentRepo
+    };
+    if (!payload.title || !payload.body) return toast("标题和正文都要填", true);
+    try {
+      const res = await post("save", payload);
+      if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
+      closeEditor(); await loadRepos(); await reload();
+      toast("已保存");
+    } catch (e) { toast(e.message || "保存失败", true); }
+  }
+  async function remove(id) {
+    const sure = await askConfirm("确定删掉这条笔记？删了找不回来。", "删掉");
+    if (!sure) return;
+    const res = await post("delete", { id: id });
+    if (res && res.ok) { closeEditor(); await loadRepos(); await reload(); toast("已删除"); }
+    else toast("删除失败", true);
+  }
+
+  function exportJson() {
+    const rows = notes.map((n) => ({
+      title: n.title, body: n.body, source: n.source, trust: n.trust, tags: n.tags, repo: n.repo
+    }));
+    const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "notes-" + (currentRepo || "all") + "-" + Date.now() + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  async function onFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const res = await post("import", { content: text, name: file.name, repo: currentRepo });
+      if (!res || !res.ok) throw new Error((res && res.error) || "导入失败");
+      await loadRepos(); await reload();
+      toast("导入了 " + (res.added || 0) + " 条");
+    } catch (err) { toast(err.message || "导入失败", true); }
+    e.target.value = "";
+  }
+
+  $("repobar").addEventListener("click", (e) => {
+    if (e.target.closest("#repo-add")) return openRepoModal(null);
+    const chip = e.target.closest(".repo");
+    if (!chip || !chip.dataset.id) return;
+    const act = e.target.closest("button[data-act]");
+    if (act) {
+      e.stopPropagation();
+      if (act.dataset.act === "settings") return openRepoModal(repos.find((r) => r.id === chip.dataset.id));
+      if (act.dataset.act === "delrepo") return deleteRepo(chip.dataset.id);
+      return;
+    }
+    if (chip.dataset.id === currentRepo) return;
+    currentRepo = chip.dataset.id;
+    tree = null;
+    loadRepos().then(reload);
+  });
+  document.querySelectorAll("#pagetabs .tab").forEach((b) => { b.onclick = () => switchView(b.dataset.page); });
+  $("search").addEventListener("input", () => { query = $("search").value; if (view === "list") renderList(); });
+
+  $("tree").addEventListener("click", (e) => {
+    const bact = e.target.closest(".bact");
+    if (bact) {
+      e.stopPropagation();
+      const branch = bact.closest(".branch");
+      const nameEl = branch && branch.querySelector(".bname");
+      const key = branch ? branch.dataset.key || "" : "";
+      // 顶层标签名就是 data-key；二级以上 key 是 "父||子"
+      const tag = key.indexOf("||") >= 0 ? key.split("||").pop() : key;
+      const node = findNode(tree && tree.groups, tag);
+      openTagModal(tag || (nameEl ? nameEl.textContent : ""), (node && node.members) || []);
+      return;
+    }
+    const shead = e.target.closest(".shead");
+    if (shead) {
+      const subBranch = shead.parentElement;
+      subBranch.classList.toggle("open");
+      const skey = subBranch.dataset.key || "";
+      if (skey) branchState.set(skey, subBranch.classList.contains("open"));
+      return;
+    }
+    const head = e.target.closest(".bhead");
+    if (head) {
+      const branch = head.parentElement;
+      branch.classList.toggle("open");
+      const key = branch.dataset.key || "";
+      if (key) branchState.set(key, branch.classList.contains("open"));
+      return;
+    }
+    const leaf = e.target.closest(".leaf");
+    if (!leaf) return;
+    const note = notes.find((n) => n.id === leaf.dataset.id);
+    if (note) openEditor(note);
+  });
+  $("grid").addEventListener("click", (e) => {
+    const card = e.target.closest(".card");
+    if (!card) return;
+    const note = notes.find((n) => n.id === card.dataset.id);
+    if (!note) return;
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return openEditor(note);
+    if (btn.dataset.act === "edit") openEditor(note);
+    if (btn.dataset.act === "del") remove(note.id);
+  });
+
+  $("r-save").onclick = saveRepo;
+  $("tag-close").onclick = closeTagModal;
+  $("t-cancel").onclick = closeTagModal;
+  $("tag-modal").addEventListener("click", (e) => { if (e.target.id === "tag-modal") closeTagModal(); });
+  $("t-rename").onclick = () => {
+    const to = $("t-name").value.trim();
+    if (!to) return toast("标签名不能为空", true);
+    if (to === tagEditing.tag) return toast("名字没变", true);
+    tagAction("rename", { new_tag: to }, "标签改名好了");
+  };
+  $("t-move").onclick = async () => {
+    const to = $("t-repo").value;
+    if (!to) return toast("没有别的仓库可以搬", true);
+    const target = repos.find((r) => r.id === to);
+    const sure = await askConfirm(
+      "把这个标签下的笔记全部搬到「" + ((target && target.name) || to) + "」？", "搬过去");
+    if (sure) tagAction("move", { to_repo: to }, "搬好了");
+  };
+  $("t-delete").onclick = async () => {
+    const sure = await askConfirm(
+      "把「" + tagEditing.tag + "」从这个仓库的所有笔记上摘掉？笔记会留着。", "摘掉");
+    if (sure) tagAction("delete", {}, "标签删掉了");
+  };
+  $("r-cancel").onclick = closeRepoModal;
+  $("repo-close").onclick = closeRepoModal;
+  $("r-th").oninput = () => {
+    $("r-th-v").textContent = "当前阈值 " + Number($("r-th").value).toFixed(2) + "，数值越低越易归并";
+  };
+  $("r-delete").onclick = () => {
+    if (!repoEditing) return;
+    const id = repoEditing.id;
+    closeRepoModal();
+    deleteRepo(id);
+  };
+  $("repo-modal").addEventListener("click", (e) => { if (e.target.id === "repo-modal") closeRepoModal(); });
+
+  $("btn-new").onclick = () => openEditor(null);
+  $("btn-new2").onclick = () => openEditor(null);
+  $("btn-refresh").onclick = () => loadRepos().then(reload);
+  $("btn-export").onclick = exportJson;
+  $("btn-import").onclick = () => $("file-input").click();
+  $("file-input").onchange = onFile;
+  $("btn-save").onclick = save;
+  $("btn-cancel").onclick = closeEditor;
+  $("btn-close").onclick = closeEditor;
+  $("btn-delete").onclick = () => editing && remove(editing.id);
+  $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) closeEditor(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeEditor(); });
+
+  (async () => {
+    const ok = await ensureBridge();
+    if (!ok) $("banner").classList.add("show");
+    if (bridge && bridge.ready) {
+      try {
+        await bridge.ready();
+        const ctx = bridge.getContext && bridge.getContext();
+        if (ctx && typeof ctx.isDark === "boolean") {
+          document.documentElement.setAttribute("data-theme", ctx.isDark ? "dark" : "light");
+        }
+      } catch (e) {}
+    }
+    await loadRepos();
+    loadVersion();
+    await reload();
+  })();
+})();
+</script>
+</body>
+</html>
