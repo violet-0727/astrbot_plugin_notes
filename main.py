@@ -35,6 +35,7 @@ from .tools import (
 PLUGIN_NAME = "astrbot_plugin_notes"
 # 面板桥接会把相对 endpoint 拼成 /api/plug/<插件名>/<endpoint>，
 # 所以这里注册的前缀是 /<插件名>，最终路由形如 /astrbot_plugin_notes/list
+PLUGIN_VERSION = "0.9.2"
 API_PREFIX = f"/{PLUGIN_NAME}"
 
 try:  # Quart 是 AstrBot 自带的，拿不到也不该让整个插件起不来
@@ -55,7 +56,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.9.1",
+    PLUGIN_VERSION,
     "",
 )
 class NotesPlugin(Star):
@@ -342,7 +343,8 @@ class NotesPlugin(Star):
         }
 
     async def api_stats(self):
-        return {"ok": True, "stats": self.store.stats()}
+        data = {"ok": True, "stats": self.store.stats(), "version": PLUGIN_VERSION}
+        return data
 
     async def api_tag_save(self):
         """标签的三种操作：改名、搬到别的仓库、从所有笔记里删掉。
