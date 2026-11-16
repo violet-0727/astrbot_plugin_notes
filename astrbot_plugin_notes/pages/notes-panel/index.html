@@ -154,7 +154,7 @@
 <div class="wrap">
   <div class="hero">
     <div>
-      <h1>她自己的笔记本</h1>
+      <h1>她自己的笔记本 <span id="ver" style="font-size:12px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:middle"></span></h1>
       <p>查到的东西存在这里。按仓库分开，同类的笔记会在树状图里归到一根枝上。</p>
     </div>
     <div class="sp"></div>
@@ -528,6 +528,13 @@
       String(n.body || "").toLowerCase().includes(q) ||
       (n.tags || []).join(" ").toLowerCase().includes(q));
   }
+  async function loadVersion() {
+    try {
+      const s = await get("stats");
+      if (s && s.version) $("ver").textContent = "v" + s.version;
+    } catch (e) { /* 读不到就不显示 */ }
+  }
+
   function renderStats(stats) {
     const s = stats || {}, by = s.by_trust || {};
     $("stats").innerHTML = [
@@ -822,6 +829,7 @@
       } catch (e) {}
     }
     await loadRepos();
+    loadVersion();
     await reload();
   })();
 })();
