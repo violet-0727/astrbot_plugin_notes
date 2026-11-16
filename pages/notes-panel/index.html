@@ -95,6 +95,10 @@
   .bname{font-weight:600;font-size:14px}
   .bcount{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px}
   .bmembers{font-size:11.5px;color:var(--muted);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bhead .bact{margin-left:auto;padding:0 7px;font-size:12px;line-height:1.6;border-radius:7px;
+  background:transparent;border:1px solid transparent;color:var(--muted);opacity:0;transition:.12s}
+.bhead:hover .bact{opacity:1}
+.bhead .bact:hover{border-color:var(--line);background:var(--field);color:var(--accent)}
   .bleaf{display:none;margin-left:22px;padding-left:14px;border-left:1px dashed var(--line)}
   .branch.open > .bleaf{display:block}
   .leaf{position:relative;display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:9px;cursor:pointer}
@@ -271,6 +275,46 @@
   </div>
 </div>
 
+<div class="modal" id="tag-modal">
+  <div class="sheet">
+    <header><h2 id="tag-title">管理标签</h2><div style="flex:1"></div>
+      <button class="ghost" id="tag-close">✕</button></header>
+    <div class="pad">
+      <div class="field"><label>标签名</label>
+        <input id="t-name" /></div>
+      <div class="field"><label>这一簇里还算在一起的写法（逗号分隔）</label>
+        <input id="t-members" placeholder="留空就只改这一个标签" /></div>
+      <div class="hint" id="t-count"></div>
+      <div class="row2" style="margin-top:10px">
+        <div class="field"><label>搬到别的仓库</label>
+          <select id="t-repo"></select></div>
+        <div class="field"><label>&nbsp;</label>
+          <button id="t-move">全部搬过去</button></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:16px;align-items:center">
+        <button class="primary" id="t-rename">保存改名</button>
+        <button class="ghost" id="t-cancel">取消</button>
+        <div style="flex:1"></div>
+        <button class="danger" id="t-delete">删掉这个标签</button>
+      </div>
+      <div class="hint" style="margin-top:10px">删掉标签只是不再给这些笔记打这个标签，笔记本身不会丢。</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="ask-modal">
+  <div class="sheet" style="width:min(420px,100%)">
+    <header><h2 id="ask-title">确认</h2></header>
+    <div class="pad">
+      <div id="ask-text" style="font-size:13.5px;line-height:1.7"></div>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button class="primary" id="ask-ok">确定</button>
+        <button class="ghost" id="ask-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="file-input" accept=".json,.txt,.md" hidden />
 <div class="toast" id="toast"></div>
 
@@ -280,6 +324,25 @@
   let bridge = null, repos = [], currentRepo = "main", notes = [], tree = null;
   let view = "tree", editing = null, query = "";
   const branchState = new Map();  // 树枝展开状态，切页不丢
+
+  // 面板在 iframe 里，window.confirm 会被浏览器拦掉（点了没反应），
+  // 所以自己画一个确认框。
+  function askConfirm(text, okText) {
+    return new Promise((resolve) => {
+      const modal = $("ask-modal");
+      $("ask-text").textContent = text;
+      $("ask-ok").textContent = okText || "确定";
+      modal.classList.add("open");
+      const done = (value) => {
+        modal.classList.remove("open");
+        $("ask-ok").onclick = null;
+        $("ask-cancel").onclick = null;
+        resolve(value);
+      };
+      $("ask-ok").onclick = () => done(true);
+      $("ask-cancel").onclick = () => done(false);
+    });
+  }
 
   const $ = (id) => document.getElementById(id);
   const ep = (p) => String(p || "").replace(/^\/+/, "");
@@ -370,6 +433,54 @@
   }
   const closeRepoModal = () => { $("repo-modal").classList.remove("open"); repoEditing = null; };
 
+  let tagEditing = null;
+
+  function findNode(groups, tag) {
+    for (const g of groups || []) {
+      if (g.tag === tag) return g;
+      const hit = findNode(g.children || [], tag);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function openTagModal(tag, members) {
+    tagEditing = { tag: tag, members: members || [] };
+    $("tag-title").textContent = "管理标签 · " + tag;
+    $("t-name").value = tag;
+    $("t-members").value = (members || []).filter((m) => m !== tag).join(", ");
+    const count = notes.filter((n) =>
+      [tag].concat(members || []).some((t) => (n.tags || []).indexOf(t) >= 0)).length;
+    $("t-count").textContent = "这个仓库里有 " + count + " 条笔记带这个标签。";
+    $("t-repo").innerHTML = repos.filter((r) => r.id !== currentRepo)
+      .map((r) => '<option value="' + esc(r.id) + '">' + esc((r.icon || "") + " " + (r.name || r.id)) + '</option>')
+      .join("");
+    $("tag-modal").classList.add("open");
+    setTimeout(() => $("t-name").focus(), 30);
+  }
+
+  const closeTagModal = () => { $("tag-modal").classList.remove("open"); tagEditing = null; };
+
+  function tagPayload(extra) {
+    return Object.assign({
+      repo: currentRepo,
+      tag: tagEditing.tag,
+      members: $("t-members").value.split(/[,，]/).map((x) => x.trim()).filter(Boolean)
+    }, extra || {});
+  }
+
+  async function tagAction(action, extra, okMsg) {
+    if (!tagEditing) return;
+    try {
+      const res = await post("tags/save", tagPayload(Object.assign({ action: action }, extra || {})));
+      if (!res || !res.ok) throw new Error((res && res.error) || "操作失败");
+      closeTagModal();
+      tree = null;
+      await loadRepos(); await reload();
+      toast(okMsg || "改好了");
+    } catch (e) { toast(e.message || "操作失败", true); }
+  }
+
   async function saveRepo() {
     const name = $("r-name").value.trim();
     if (!name) return toast("仓库名称不可为空", true);
@@ -398,7 +509,9 @@
   async function deleteRepo(id) {
     const repo = repos.find((r) => r.id === id);
     if (repo && repo.id === "main") return toast("主仓库不能删", true);
-    if (!confirm("删掉「" + (repo ? repo.name : id) + "」？里面的笔记会搬回主仓库，不会丢。")) return;
+    const sure = await askConfirm(
+      "删掉「" + (repo ? repo.name : id) + "」？里面的笔记会搬回主仓库，不会丢。", "删掉");
+    if (!sure) return;
     const res = await post("repos/save", { action: "delete", id: id });
     if (res && res.ok) {
       currentRepo = "main"; tree = null;
@@ -462,6 +575,8 @@
       + '<div class="bhead"><span class="caret">▶</span><span class="bname">' + esc(node.tag) + '</span>'
       + '<span class="bcount">' + (node.count || (node.notes || []).length) + '</span>'
       + (members.length ? '<span class="bmembers">含 ' + esc(members.join(" / ")) + '</span>' : '')
+      + (node.tag === "未分类" ? ""
+        : '<button class="bact" data-tact="manage" title="管理这个标签">⋯</button>')
       + '</div><div class="bleaf">' + inner + '</div></div>';
   }
 
@@ -550,7 +665,8 @@
     } catch (e) { toast(e.message || "保存失败", true); }
   }
   async function remove(id) {
-    if (!confirm("确定删掉这条笔记？")) return;
+    const sure = await askConfirm("确定删掉这条笔记？删了找不回来。", "删掉");
+    if (!sure) return;
     const res = await post("delete", { id: id });
     if (res && res.ok) { closeEditor(); await loadRepos(); await reload(); toast("已删除"); }
     else toast("删除失败", true);
@@ -600,6 +716,18 @@
   $("search").addEventListener("input", () => { query = $("search").value; if (view === "list") renderList(); });
 
   $("tree").addEventListener("click", (e) => {
+    const bact = e.target.closest(".bact");
+    if (bact) {
+      e.stopPropagation();
+      const branch = bact.closest(".branch");
+      const nameEl = branch && branch.querySelector(".bname");
+      const key = branch ? branch.dataset.key || "" : "";
+      // 顶层标签名就是 data-key；二级以上 key 是 "父||子"
+      const tag = key.indexOf("||") >= 0 ? key.split("||").pop() : key;
+      const node = findNode(tree && tree.groups, tag);
+      openTagModal(tag || (nameEl ? nameEl.textContent : ""), (node && node.members) || []);
+      return;
+    }
     const shead = e.target.closest(".shead");
     if (shead) {
       const subBranch = shead.parentElement;
@@ -633,6 +761,28 @@
   });
 
   $("r-save").onclick = saveRepo;
+  $("tag-close").onclick = closeTagModal;
+  $("t-cancel").onclick = closeTagModal;
+  $("tag-modal").addEventListener("click", (e) => { if (e.target.id === "tag-modal") closeTagModal(); });
+  $("t-rename").onclick = () => {
+    const to = $("t-name").value.trim();
+    if (!to) return toast("标签名不能为空", true);
+    if (to === tagEditing.tag) return toast("名字没变", true);
+    tagAction("rename", { new_tag: to }, "标签改名好了");
+  };
+  $("t-move").onclick = async () => {
+    const to = $("t-repo").value;
+    if (!to) return toast("没有别的仓库可以搬", true);
+    const target = repos.find((r) => r.id === to);
+    const sure = await askConfirm(
+      "把这个标签下的笔记全部搬到「" + ((target && target.name) || to) + "」？", "搬过去");
+    if (sure) tagAction("move", { to_repo: to }, "搬好了");
+  };
+  $("t-delete").onclick = async () => {
+    const sure = await askConfirm(
+      "把「" + tagEditing.tag + "」从这个仓库的所有笔记上摘掉？笔记会留着。", "摘掉");
+    if (sure) tagAction("delete", {}, "标签删掉了");
+  };
   $("r-cancel").onclick = closeRepoModal;
   $("repo-close").onclick = closeRepoModal;
   $("r-th").oninput = () => {

@@ -55,7 +55,7 @@ def _as_list(value: Any) -> list[str]:
     PLUGIN_NAME,
     "若剑清",
     "她自己的笔记本：把查到的、值得留的结论存下来，下次自动带上，并标注来源与可信度。",
-    "0.8.2",
+    "0.9.0",
     "",
 )
 class NotesPlugin(Star):
@@ -147,6 +147,7 @@ class NotesPlugin(Star):
             ("/repos", self.api_repos, ["GET"], "仓库列表"),
             ("/repos/save", self.api_repo_save, ["POST"], "新建/改名/删除仓库"),
             ("/tree", self.api_tree, ["GET"], "按标签聚合成树"),
+            ("/tags/save", self.api_tag_save, ["POST"], "改标签：改名/移动/删除"),
         ]
         for path, handler, methods, desc in routes:
             try:
@@ -343,13 +344,81 @@ class NotesPlugin(Star):
     async def api_stats(self):
         return {"ok": True, "stats": self.store.stats()}
 
+    async def api_tag_save(self):
+        """标签的三种操作：改名、搬到别的仓库、从所有笔记里删掉。
+
+        action:
+            rename  {repo, tag, new_tag}
+            move    {repo, tag, to_repo}
+            delete  {repo, tag}
+        """
+        payload = await self._json_body()
+        action = str(payload.get("action") or "").strip()
+        repo = str(payload.get("repo") or "main").strip() or "main"
+        tag = str(payload.get("tag") or "").strip()
+        if not tag:
+            return {"ok": False, "error": "缺少标签名"}
+        if action not in ("rename", "move", "delete"):
+            return {"ok": False, "error": "未知操作"}
+
+        # 这个标签名可能只是某一簇里的一个成员，members 里全部算上
+        members = payload.get("members") or []
+        if not isinstance(members, list):
+            members = []
+        names = {tag} | {str(m).strip() for m in members if str(m).strip()}
+
+        targets = [
+            n for n in self.store.all(repo)
+            if names & {str(t).strip() for t in (n.get("tags") or []) if str(t).strip()}
+        ]
+
+        if action == "delete":
+            for note in targets:
+                kept = [str(t).strip() for t in (note.get("tags") or [])
+                        if str(t).strip() and str(t).strip() not in names]
+                self.store.update(note["id"], tags=kept)
+            return {"ok": True, "affected": len(targets)}
+
+        if action == "rename":
+            new_tag = str(payload.get("new_tag") or "").strip()[:40]
+            if not new_tag:
+                return {"ok": False, "error": "新标签不能为空"}
+            for note in targets:
+                out: list[str] = []
+                for old in (note.get("tags") or []):
+                    old = str(old).strip()
+                    if not old:
+                        continue
+                    replaced = new_tag if old in names else old
+                    if replaced not in out:
+                        out.append(replaced)
+                self.store.update(note["id"], tags=out)
+            return {"ok": True, "affected": len(targets), "tag": new_tag}
+
+        # move
+        to_repo = str(payload.get("to_repo") or "").strip()
+        if not to_repo:
+            return {"ok": False, "error": "要搬到哪个仓库"}
+        if to_repo == repo:
+            return {"ok": False, "error": "这些笔记已经在这个仓库了"}
+        if not self.repos.get(to_repo):
+            return {"ok": False, "error": "目标仓库不存在"}
+        moved = 0
+        for note in targets:
+            if self.store.update(note["id"], repo=to_repo):
+                moved += 1
+        return {"ok": True, "moved": moved}
+
     async def api_save(self):
         payload = await self._json_body()
         title = str(payload.get("title") or "").strip()
         body = str(payload.get("body") or "").strip()
-        if not title or not body:
-            return {"ok": False, "error": "标题和正文都不能为空"}
         note_id = str(payload.get("id") or "").strip()
+        # 新建必须标题+正文；改已有的笔记允许只动标签/可信度/仓库
+        if not title:
+            return {"ok": False, "error": "标题不能为空"}
+        if not note_id and not body:
+            return {"ok": False, "error": "新建笔记时正文不能为空"}
         repo = str(payload.get("repo") or self._query("repo") or "main").strip() or "main"
         source = str(payload.get("source") or "").strip()
         tags = payload.get("tags") or []

@@ -20,18 +20,23 @@ def _plugin_name() -> str:
 
 def log_dir() -> str:
     name = _plugin_name()
+    # 从插件自己的位置推：<data>/plugins/<name> -> <data>/plugin_data/<name>
+    here = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.dirname(os.path.dirname(here))
+    path = os.path.join(data_dir, "plugin_data", name)
+    try:
+        os.makedirs(path, exist_ok=True)
+        return path
+    except Exception:
+        pass
     try:
         from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
-        base = get_astrbot_plugin_data_path()
+        fallback = os.path.join(get_astrbot_plugin_data_path(), name)
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
     except Exception:
-        base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "plugin_data")
-    path = os.path.join(base, name)
-    try:
-        os.makedirs(path, exist_ok=True)
-    except Exception:
-        pass
-    return path
+        return path
 
 
 def log_inject(text: str, who: str = "") -> None:
